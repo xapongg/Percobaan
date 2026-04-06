@@ -284,7 +284,11 @@ local function GetStock(itemName)
     local itemGui = PlayerGui.Main.Stores.Food.Main.Content:FindFirstChild(itemName)
     if not itemGui then return 0 end
 
-    local stockLabel = itemGui.Content:FindFirstChild("Stock")
+    -- cek apakah ada child bernama Stock
+    local stockLabel = itemGui:FindFirstChild("Stock")
+    if not stockLabel then
+        stockLabel = itemGui:FindFirstChild("Content") and itemGui.Content:FindFirstChild("Stock")
+    end
     if not stockLabel then return 0 end
 
     local num = stockLabel.Text:match("%d+")
