@@ -200,8 +200,9 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 --// REMOTE
 --------------------------------------------------
 local Remote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
-    :WaitForChild("49CC61B303164158BE1EE82A4DED1378")
-    :WaitForChild("E3DFDAC03213457FA0D89BF4CEA90818")
+    :WaitForChild("0dbb2bdbfdc148b68deeba317aaae395")
+    :WaitForChild("010c98210e724518b6a1116ddd53eab9")
+
 
 --------------------------------------------------
 --// FOOD DATA MANUAL
@@ -284,11 +285,7 @@ local function GetStock(itemName)
     local itemGui = PlayerGui.Main.Stores.Food.Main.Content:FindFirstChild(itemName)
     if not itemGui then return 0 end
 
-    -- cek apakah ada child bernama Stock
-    local stockLabel = itemGui:FindFirstChild("Stock")
-    if not stockLabel then
-        stockLabel = itemGui:FindFirstChild("Content") and itemGui.Content:FindFirstChild("Stock")
-    end
+    local stockLabel = itemGui.Content:FindFirstChild("Stock")
     if not stockLabel then return 0 end
 
     local num = stockLabel.Text:match("%d+")
