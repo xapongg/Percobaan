@@ -199,7 +199,8 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 --------------------------------------------------
 --// REMOTE
 --------------------------------------------------
-local Remote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("004153022fed4136a5918e972551b373"):WaitForChild("2745152ca5944df589c1d5c896396424")
+local Remote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("b45b4cc98f1447d79af27cc24b24e58a"):WaitForChild("0cae1ff829a04849a69f08121ca059b0")
+
 
 
 
