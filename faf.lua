@@ -1,3 +1,7 @@
+--// loadstring(game:HttpGet("https://raw.githubusercontent.com/xapongg/Percobaan/refs/heads/main/faf.lua"))()
+
+
+
 --// Services
 local Players = game:GetService("Players")
 local VirtualUser = game:GetService("VirtualUser")
@@ -377,4 +381,67 @@ MainTab:Toggle({
         end
     end
 })
+
+
+--// AUTO BUY EGG SYSTEM (MULTI)
+local AutoBuyBait = false
+local SelectedBait = {}
+
+-- List egg (ISI SENDIRI)
+local BaitList = {
+    "Jelly",
+    "Whale",
+    "Squid",
+    "Shark",
+    "Megalodon",
+    "Kraken",
+    "Maja",
+    "Bloop",
+    "OceanEater",
+}
+
+-- Dropdown (MULTI)
+MainTab:Dropdown({
+    Title = "Select Items",
+    Values = BaitList,
+    Multi = true,
+    Default = {},
+    Callback = function(values)
+        SelectedBait = values
+    end
+})
+
+-- Toggle
+MainTab:Toggle({
+    Title = "Auto Buy Bait",
+    Default = false,
+    Callback = function(state)
+        AutoBuyBait = state
+
+        if state then
+            task.spawn(function()
+                while AutoBuyBait do
+                    task.wait(1)
+
+                    for _, bait in pairs(SelectedBait) do
+                        pcall(function()
+                            game:GetService("ReplicatedStorage")
+                                :WaitForChild("rbxts_include")
+                                :WaitForChild("node_modules")
+                                :WaitForChild("@rbxts")
+                                :WaitForChild("remo")
+                                :WaitForChild("src")
+                                :WaitForChild("container")
+                                :WaitForChild("shop.purchaseBait")
+                                :FireServer(bait)
+                        end)
+
+                        task.wait(0.2) -- anti spam
+                    end
+                end
+            end)
+        end
+    end
+})
+
 
