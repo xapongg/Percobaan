@@ -525,7 +525,7 @@ local AutoBuyMerchantToggle = MainTab:Toggle({
 task.defer(function()
     AutoBuyToggle:Set(true)
     AutoBuyEggToggle:Set(true)
-    AutoBuyEventToggle:Set(true)
+    AutoBuyEventToggle:Set(false)
     AutoBuyBaitToggle:Set(true)
     AutoBuyMerchantToggle:Set(true)
 end)
