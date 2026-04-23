@@ -247,13 +247,13 @@ MainTab:Dropdown({
     Title = "Select Items",
     Values = ItemList,
     Multi = true,
-    Default = {},
+    Value = {"All"},
     Callback = function(values)
         SelectedItems = HandleSelection(values, ItemList)
     end
 })
 
-MainTab:Toggle({
+local AutoBuyToggle = MainTab:Toggle({
     Title = "Auto Buy Items",
     Default = false,
     Callback = function(state)
@@ -304,13 +304,13 @@ MainTab:Dropdown({
     Title = "Select Eggs",
     Values = EggList,
     Multi = true,
-    Default = {},
+    Value = {"Polar", "Tropical", "Exotic"},
     Callback = function(values)
         SelectedEggs = HandleSelection(values, EggList)
     end
 })
 
-MainTab:Toggle({
+local AutoBuyEggToggle = MainTab:Toggle({
     Title = "Auto Buy Egg",
     Default = false,
     Callback = function(state)
@@ -357,13 +357,13 @@ MainTab:Dropdown({
     Title = "Select Event Items",
     Values = EventList,
     Multi = true,
-    Default = {},
+    Value = {"egg:Easter"},
     Callback = function(values)
         SelectedEvents = HandleSelection(values, EventList)
     end
 })
 
-MainTab:Toggle({
+local AutoBuyEventToggle = MainTab:Toggle({
     Title = "Auto Buy Event",
     Default = false,
     Callback = function(state)
@@ -402,6 +402,14 @@ local SelectedBaits = {}
 
 local BaitList = {
     "All",
+    "Koi",
+    "River",
+    "Puffer",
+    "Glo",
+    "Seal",
+    "Ray",
+    "Octopus",
+    "Axolotl",
     "Jelly",
 	"Whale",
 	"Squid",
@@ -417,13 +425,13 @@ MainTab:Dropdown({
     Title = "Select Baits",
     Values = BaitList,
     Multi = true,
-    Default = {},
+	Value = {"All"},
     Callback = function(values)
         SelectedBaits = HandleSelection(values, BaitList)
     end
 })
 
-MainTab:Toggle({
+local AutoBuyBaitToggle = MainTab:Toggle({
     Title = "Auto Buy Bait",
     Default = false,
     Callback = function(state)
@@ -474,13 +482,13 @@ MainTab:Dropdown({
     Title = "Select Merchant Items",
     Values = MerchantList,
     Multi = true,
-    Default = {},
+    Value = {"All"},
     Callback = function(values)
         SelectedMerchantItems = HandleSelection(values, MerchantList)
     end
 })
 
-MainTab:Toggle({
+local AutoBuyMerchantToggle = MainTab:Toggle({
     Title = "Auto Buy Merchant",
     Default = false,
     Callback = function(state)
@@ -511,3 +519,13 @@ MainTab:Toggle({
         end
     end
 })
+
+
+
+task.defer(function()
+    AutoBuyToggle:Set(true)
+    AutoBuyEggToggle:Set(true)
+    AutoBuyEventToggle:Set(true)
+    AutoBuyBaitToggle:Set(true)
+    AutoBuyMerchantToggle:Set(true)
+end)
