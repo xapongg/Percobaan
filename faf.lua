@@ -350,6 +350,7 @@ local SelectedEvents = {}
 local EventList = {
     "All",
     "baitpack:Easter",
+    "egg:Easter",
 }
 
 MainTab:Dropdown({
