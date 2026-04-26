@@ -1,8 +1,6 @@
 --// loadstring(game:HttpGet("https://raw.githubusercontent.com/xapongg/Percobaan/refs/heads/main/faf.lua"))()
 
 
-
-
 --// Services
 local Players = game:GetService("Players")
 local VirtualUser = game:GetService("VirtualUser")
