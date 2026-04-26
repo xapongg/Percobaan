@@ -691,7 +691,7 @@ MiscTab:Slider({
 
 task.defer(function()
     AutoFeedToggle:Set(true) -- tambah ini
-    AutoBuyToggle:Set(true)
+    AutoBuyToggle:Set(true) -- sini jing
     AutoBuyEggToggle:Set(true)
     AutoBuyBaitToggle:Set(true)
     AutoBuyMerchantToggle:Set(true)
