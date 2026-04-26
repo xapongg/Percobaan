@@ -213,6 +213,42 @@ local function HandleSelection(values, fullList)
     return result
 end
 
+
+--------------------------------------------------
+--// AUTO FEED ASTRONAUT (FAST LOOP)
+--------------------------------------------------
+local AutoFeedAstronaut = false
+
+local FeedRemote = game:GetService("ReplicatedStorage")
+    :WaitForChild("rbxts_include")
+    :WaitForChild("node_modules")
+    :WaitForChild("@rbxts")
+    :WaitForChild("remo")
+    :WaitForChild("src")
+    :WaitForChild("container")
+    :WaitForChild("moon.feedAstronautAll")
+
+local AutoFeedToggle = MainTab:Toggle({
+    Title = "Auto Feed Astronaut",
+    Default = false,
+    Callback = function(state)
+        AutoFeedAstronaut = state
+
+        if state then
+			task.spawn(function()
+				while AutoFeedAstronaut do
+					for i = 1, 3 do -- spam 3x per tick
+						pcall(function()
+							FeedRemote:FireServer()
+						end)
+					end
+					task.wait() -- fastest safe
+				end
+			end)
+        end
+    end
+})
+
 --------------------------------------------------
 --// AUTO BUY ITEM
 --------------------------------------------------
@@ -262,7 +298,7 @@ local AutoBuyToggle = MainTab:Toggle({
         if state then
             task.spawn(function()
                 while AutoBuy do
-                    task.wait(1)
+                    task.wait(0.1)
 
                     for _, item in pairs(SelectedItems) do
                         pcall(function()
@@ -276,7 +312,7 @@ local AutoBuyToggle = MainTab:Toggle({
                                 :WaitForChild("shop.purchaseGear")
                                 :FireServer(item)
                         end)
-                        task.wait(0.2)
+                        task.wait(0.05)
                     end
                 end
             end)
@@ -319,7 +355,7 @@ local AutoBuyEggToggle = MainTab:Toggle({
         if state then
             task.spawn(function()
                 while AutoBuyEgg do
-                    task.wait(1)
+                    task.wait(0.1)
 
                     for _, egg in pairs(SelectedEggs) do
                         pcall(function()
@@ -333,60 +369,7 @@ local AutoBuyEggToggle = MainTab:Toggle({
                                 :WaitForChild("shop.purchaseEgg")
                                 :FireServer(egg)
                         end)
-                        task.wait(0.2)
-                    end
-                end
-            end)
-        end
-    end
-})
-
---------------------------------------------------
---// AUTO BUY EVENT
---------------------------------------------------
-local AutoBuyEvent = false
-local SelectedEvents = {}
-
-local EventList = {
-    "All",
-    "baitpack:Easter",
-    "egg:Easter",
-}
-
-MainTab:Dropdown({
-    Title = "Select Event Items",
-    Values = EventList,
-    Multi = true,
-    Value = {"egg:Easter"},
-    Callback = function(values)
-        SelectedEvents = HandleSelection(values, EventList)
-    end
-})
-
-local AutoBuyEventToggle = MainTab:Toggle({
-    Title = "Auto Buy Event",
-    Default = false,
-    Callback = function(state)
-        AutoBuyEvent = state
-
-        if state then
-            task.spawn(function()
-                while AutoBuyEvent do
-                    task.wait(1)
-
-                    for _, event in pairs(SelectedEvents) do
-                        pcall(function()
-                            game:GetService("ReplicatedStorage")
-                                :WaitForChild("rbxts_include")
-                                :WaitForChild("node_modules")
-                                :WaitForChild("@rbxts")
-                                :WaitForChild("remo")
-                                :WaitForChild("src")
-                                :WaitForChild("container")
-                                :WaitForChild("shop.purchaseEventItem")
-                                :FireServer(event)
-                        end)
-                        task.wait(0.2)
+                        task.wait(0.05)
                     end
                 end
             end)
@@ -440,7 +423,7 @@ local AutoBuyBaitToggle = MainTab:Toggle({
         if state then
             task.spawn(function()
                 while AutoBuyBait do
-                    task.wait(1)
+                    task.wait(0.1)
 
                     for _, bait in pairs(SelectedBaits) do
                         pcall(function()
@@ -454,7 +437,7 @@ local AutoBuyBaitToggle = MainTab:Toggle({
                                 :WaitForChild("shop.purchaseBait")
                                 :FireServer(bait)
                         end)
-                        task.wait(0.2)
+                        task.wait(0.05)
                     end
                 end
             end)
@@ -497,7 +480,7 @@ local AutoBuyMerchantToggle = MainTab:Toggle({
         if state then
             task.spawn(function()
                 while AutoBuyMerchant do
-                    task.wait(1)
+                    task.wait(0.1)
 
                     for _, item in pairs(SelectedMerchantItems) do
                         pcall(function()
@@ -512,7 +495,7 @@ local AutoBuyMerchantToggle = MainTab:Toggle({
                                 :FireServer("travelling", item)
                         end)
 
-                        task.wait(0.2)
+                        task.wait(0.05)
                     end
                 end
             end)
@@ -520,12 +503,197 @@ local AutoBuyMerchantToggle = MainTab:Toggle({
     end
 })
 
+--------------------------------------------------
+--// SELL ALL (FIXED)
+--------------------------------------------------
+local SellRemote = ReplicatedStorage
+    :WaitForChild("rbxts_include")
+    :WaitForChild("node_modules")
+    :WaitForChild("@rbxts")
+    :WaitForChild("remo")
+    :WaitForChild("src")
+    :WaitForChild("container")
+    :WaitForChild("sellFish.sellAllFish")
+
+local function SellAllFish()
+    local success, err = pcall(function()
+        SellRemote:FireServer()
+    end)
+
+    if success then
+        WindUI:Notify({
+            Title = "Sell Fish",
+            Content = "All fish sold 🐟",
+            Duration = 3
+        })
+    end
+end
+
+--------------------------------------------------
+--// AUTO SELL (1 DETIK)
+--------------------------------------------------
+local AutoSell = false
+
+local AutoSellToggle = MainTab:Toggle({
+    Title = "Auto Sell Fish (1s)",
+    Default = false,
+    Callback = function(state)
+        AutoSell = state
+
+        if state then
+            task.spawn(function()
+                while AutoSell do
+                    pcall(function()
+                        SellRemote:FireServer()
+                    end)
+
+                    task.wait(1) -- 1 detik
+                end
+            end)
+        end
+    end
+})
+
+--------------------------------------------------
+--// KEYBIND Q (HARD FIX)
+--------------------------------------------------
+UIS.InputBegan:Connect(function(input, gpe)
+    if input.KeyCode == Enum.KeyCode.Q then
+        SellAllFish()
+    end
+end)
+
+
+--------------------------------------------------
+--// AUTO COLLECT ALL FISH (MULTI POND)
+--------------------------------------------------
+local AutoCollect = false
+
+local CollectRemote = game:GetService("ReplicatedStorage")
+    :WaitForChild("rbxts_include")
+    :WaitForChild("node_modules")
+    :WaitForChild("@rbxts")
+    :WaitForChild("remo")
+    :WaitForChild("src")
+    :WaitForChild("container")
+    :WaitForChild("bait.collectAllFish")
+
+-- ambil semua ID pond (UUID)
+local function GetAllPondIDs()
+    local ids = {}
+
+    for _, pond in pairs(workspace:WaitForChild("Ponds"):GetChildren()) do
+        local buildings = pond:FindFirstChild("Buildings")
+        if buildings then
+            for _, obj in pairs(buildings:GetChildren()) do
+                -- biasanya name = UUID
+                if typeof(obj.Name) == "string" and string.find(obj.Name, "-") then
+                    table.insert(ids, obj.Name)
+                end
+            end
+        end
+    end
+
+    return ids
+end
+
+-- toggle UI
+local AutoCollectToggle = MainTab:Toggle({
+    Title = "Auto Collect Fish (All Pond)",
+    Default = false,
+    Callback = function(state)
+        AutoCollect = state
+
+        if state then
+			task.spawn(function()
+				while AutoCollect do
+					local ids = GetAllPondIDs()
+
+					for _, id in ipairs(ids) do
+						if not AutoCollect then break end
+
+						-- spam dikit biar lebih cepet collect
+						for i = 1, 2 do
+							pcall(function()
+								CollectRemote:FireServer(id)
+							end)
+						end
+
+						task.wait() -- super cepat
+					end
+				end
+			end)
+        end
+    end
+})
+
+--------------------------------------------------
+--// AUTO OPEN BAIT PACK (MOON)
+--------------------------------------------------
+local AutoOpenBaitPack = false
+
+local BaitPackRemote = game:GetService("ReplicatedStorage")
+    :WaitForChild("rbxts_include")
+    :WaitForChild("node_modules")
+    :WaitForChild("@rbxts")
+    :WaitForChild("remo")
+    :WaitForChild("src")
+    :WaitForChild("container")
+    :WaitForChild("store.openBaitPack")
+
+local AutoBaitPackToggle = MainTab:Toggle({
+    Title = "Auto Open Bait Pack (Moon)",
+    Default = false,
+    Callback = function(state)
+        AutoOpenBaitPack = state
+
+        if state then
+            task.spawn(function()
+                while AutoOpenBaitPack do
+                    -- spam cepat tapi masih aman
+                    for i = 1, 2 do
+                        pcall(function()
+                            BaitPackRemote:FireServer("Moon:normal")
+                        end)
+                    end
+
+                    task.wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+--------------------------------------------------
+--// Walk Speed
+--------------------------------------------------
+local MiscTab = Window:Tab({Title = "Misc", Icon = "sfsymbols:wrenchAndScrewdriver"})
+
+MiscTab:Slider({
+    Title = "Walk Speed",
+    Desc = "Adjust character speed",
+    Step = 1,
+    Value = {
+        Min = 20,
+        Max = 100,
+        Default = 20,
+    },
+    Callback = function(speed)
+        local player = game.Players.LocalPlayer
+        local char = player.Character or player.CharacterAdded:Wait()
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+
+        if humanoid then
+            humanoid.WalkSpeed = speed
+        end
+    end
+})
 
 
 task.defer(function()
+    AutoFeedToggle:Set(true) -- tambah ini
     AutoBuyToggle:Set(true)
     AutoBuyEggToggle:Set(true)
-    AutoBuyEventToggle:Set(false)
     AutoBuyBaitToggle:Set(true)
     AutoBuyMerchantToggle:Set(true)
 end)
