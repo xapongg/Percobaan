@@ -1490,7 +1490,7 @@ task.spawn(function()
         hookImage(v)
     end
 
-    -- detect UI baru
+    -- detect UI baruu
     PlayerGui.DescendantAdded:Connect(function(obj)
         hookImage(obj)
     end)
