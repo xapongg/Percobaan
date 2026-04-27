@@ -718,10 +718,6 @@ task.spawn(function()
 		["139489888298750"] = "Sunny",
 		["76115335291557"] = "Night",
 		["107677789023567"] = "Fire",
-		["119395566421956"] = "Frost",
-		["123550552285357"] = "Starry",
-		["87686114195984"] = "Radioactive",
-		["101820006934634"] = "Fallout",
 	}
 
     -- 🔥 FILTER ASSET ID (ISI YANG MAU DI-DETECT SAJA)
@@ -750,11 +746,18 @@ task.spawn(function()
 		local req = (syn and syn.request) or http_request
 		if not req then return end
 
+		local player = Players.LocalPlayer
+		local username = player.Name
+		local displayName = player.DisplayName
+
 		local data = {
-			content = "<@&"..ROLE_ID..">",
+			-- 👇 mention + event name
+			content = "<@&"..ROLE_ID.."> 🎯 **"..tostring(name).."**",
+
 			embeds = {{
 				title = "🎯 Event Detected",
 				description =
+					"👤 Player: **"..displayName.."** (`"..username.."`)\n"..
 					"🖼️ Event Name: **"..tostring(name).."**\n"..
 					"🆔 Asset ID: `" ..tostring(id).."`\n"..
 					"📍 Path: `" ..tostring(path).."`"
@@ -765,7 +768,7 @@ task.spawn(function()
 			Url = WEBHOOK_URL,
 			Method = "POST",
 			Headers = {["Content-Type"] = "application/json"},
-			Body = game:GetService("HttpService"):JSONEncode(data)
+			Body = HttpService:JSONEncode(data)
 		})
 	end
 
