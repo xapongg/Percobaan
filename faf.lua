@@ -718,11 +718,15 @@ task.spawn(function()
 		["139489888298750"] = "Sunny",
 		["76115335291557"] = "Night",
 		["107677789023567"] = "Fire",
+		["119395566421956"] = "Frost",
+		["101011969289510"] = "Windstruck",
+		["88785950117411"] = "Blood Moon",
+		["87686114195984"] = "Radioactive",
 	}
 
     -- 🔥 FILTER ASSET ID (ISI YANG MAU DI-DETECT SAJA)
     local ALLOWED_IDS = {
-		"127186374521571",
+		-- "127186374521571",
 	}
 
 	local detectedIds = {}
@@ -811,4 +815,49 @@ task.spawn(function()
     PlayerGui.DescendantAdded:Connect(function(obj)
         hookImage(obj)
     end)
+end)
+
+
+--// HEARTBEAT WEBHOOK (30 DETIK - AMAN)
+
+task.spawn(function()
+    local Players = game:GetService("Players")
+    local HttpService = game:GetService("HttpService")
+
+    local WEBHOOK_URL = "https://discord.com/api/webhooks/1498259284834779166/K6vk6z6p-BqWKapCqgjstB3In897U82O0xDmH58LQ5LwJc7diZGhaSHiHYrjzATHPuvJ"
+
+    local player = Players.LocalPlayer
+
+    while true do
+        task.wait(30 + math.random(0,5)) -- 30-35 detik (lebih aman)
+
+        local req = (syn and syn.request) or http_request
+        if not req then continue end
+
+        local username = player.Name
+        local displayName = player.DisplayName
+        local timestamp = os.date("%Y-%m-%d %H:%M:%S")
+
+        local data = {
+            content = "🟢 Still Active",
+            embeds = {{
+                title = "Heartbeat Status",
+                description =
+                    "👤 Player: **"..displayName.."** (`"..username.."`)\n"..
+                    "⏱️ Time: `"..timestamp.."`\n"..
+                    "📡 Status: ACTIVE"
+            }}
+        }
+
+        pcall(function()
+            req({
+                Url = WEBHOOK_URL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = HttpService:JSONEncode(data)
+            })
+        end)
+    end
 end)
