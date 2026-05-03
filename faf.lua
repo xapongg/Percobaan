@@ -193,6 +193,173 @@ local MainTab = Window:Tab({
     Icon = Icons.home
 })
 
+
+
+--// =========================
+-- DATA CRAFT
+--// =========================
+local CraftRecipes = {
+    ["DiamondCookie"] = {
+        Submit = {"XpCookie", "GoldenCookie", "PetToy"}
+    },
+}
+
+local SelectedCraft = "DiamondCookie"
+
+local CraftList = {}
+for name, _ in pairs(CraftRecipes) do
+    table.insert(CraftList, name)
+end
+
+MainTab:Dropdown({
+    Title = "Select Craft",
+    Values = CraftList,
+    Multi = false,
+    Value = CraftList[1],
+    Callback = function(value)
+        SelectedCraft = value
+    end
+})
+
+--// =========================
+-- REMOTES
+--// =========================
+local base = game:GetService("ReplicatedStorage")
+    :WaitForChild("rbxts_include")
+    :WaitForChild("node_modules")
+    :WaitForChild("@rbxts")
+    :WaitForChild("remo")
+    :WaitForChild("src")
+    :WaitForChild("container")
+
+local Craft_Remote_Select = base:WaitForChild("crafting.selectCraftingItem")
+local Craft_Remote_Submit = base:WaitForChild("crafting.submitItems")
+local Craft_Remote_Start = base:WaitForChild("crafting.startCraft")
+local Craft_Remote_Collect = base:WaitForChild("crafting.collectCraft")
+
+--// =========================
+-- READY CHECK (FAST + RELIABLE)
+--// =========================
+local function isReady()
+    local pg = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
+    if not pg then return false end
+
+    for _, v in pairs(pg:GetDescendants()) do
+        if v:IsA("TextLabel") and v.Text == "READY!" then
+            return true
+        end
+    end
+
+    return false
+end
+
+-- 🔥 tunggu READY stabil (anti fake / lag UI)
+local function waitReadyStable()
+    local count = 0
+
+    while true do
+        if isReady() then
+            count += 1
+        else
+            count = 0
+        end
+
+        if count >= 3 then
+            break
+        end
+
+        task.wait(1)
+    end
+end
+
+-- 🔥 force collect (debug + retry safe)
+local function forceCollect()
+    local success, err = pcall(function()
+        Craft_Remote_Collect:FireServer("gear")
+    end)
+
+    print("COLLECT:", success, err)
+end
+
+-- 🔥 bersihin READY sebelum craft baru
+local function clearReady()
+    while isReady() do
+        print("CLEARING READY...")
+        forceCollect()
+        task.wait(0.5)
+    end
+end
+
+
+--// =========================
+-- AUTO CRAFT
+--// =========================
+local AutoCraft = false
+
+MainTab:Toggle({
+    Title = "Auto Craft (FIXED STABLE)",
+    Default = false,
+    Callback = function(state)
+        AutoCraft = state
+
+        if state then
+            task.spawn(function()
+                while AutoCraft do
+
+                    local recipe = CraftRecipes[SelectedCraft]
+                    if not recipe then
+                        task.wait(1)
+                        continue
+                    end
+
+                    -- 🔒 1. CLEAN STATE DULU
+                    clearReady()
+
+                    -- 2. SELECT
+                    pcall(function()
+                        Craft_Remote_Select:FireServer(SelectedCraft, "gear")
+                    end)
+
+                    task.wait(0.2)
+
+                    -- 3. SUBMIT
+                    pcall(function()
+                        Craft_Remote_Submit:FireServer(recipe.Submit, "gear")
+                    end)
+
+                    task.wait(0.2)
+
+                    -- 4. START
+                    pcall(function()
+                        Craft_Remote_Start:FireServer("gear")
+                    end)
+
+                    -- 🔥 5. WAIT READY STABLE (INI FIX UTAMA)
+                    waitReadyStable()
+
+                    task.wait(0.5) -- buffer sync server
+
+                    -- 6. COLLECT
+                    forceCollect()
+
+                    task.wait(0.3)
+                end
+            end)
+        end
+    end
+})
+
+
+
+
+
+
+
+
+
+
+
+
 --------------------------------------------------
 --// FUNCTION HELPER (ALL SELECTOR)
 --------------------------------------------------
@@ -722,6 +889,7 @@ task.spawn(function()
 		["101011969289510"] = "Windstruck",
 		["88785950117411"] = "Blood Moon",
 		["87686114195984"] = "Radioactive",
+		["92048929392817"] = "Ghost",
 	}
 
     -- 🔥 FILTER ASSET ID (ISI YANG MAU DI-DETECT SAJA)
