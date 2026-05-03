@@ -851,30 +851,53 @@ local AutoBaitPackToggle = MainTab:Toggle({
 --------------------------------------------------
 local MiscTab = Window:Tab({Title = "Misc", Icon = "sfsymbols:wrenchAndScrewdriver"})
 
-local FPSBoost = false
+local ExtremeFPS = false
 
-local function applyFPSBoost(state)
+local function applyExtreme(state)
     local Lighting = game:GetService("Lighting")
+    local Terrain = workspace:FindFirstChildOfClass("Terrain")
 
     if state then
-        -- 🔥 FPS boost visual
+        -- 🔥 LIGHTING KILL
         Lighting.GlobalShadows = false
         Lighting.FogEnd = 1e10
         Lighting.Brightness = 1
+        Lighting.EnvironmentDiffuseScale = 0
+        Lighting.EnvironmentSpecularScale = 0
 
         for _, v in pairs(Lighting:GetChildren()) do
-            if v:IsA("PostEffect") then
+            if v:IsA("PostEffect") or v:IsA("BlurEffect") or v:IsA("ColorCorrectionEffect") then
                 v.Enabled = false
             end
         end
 
+        -- 🔥 GRAPHIC DOWNGRADE
         settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
 
-        -- 🐾 clean pets langsung
+        -- 🌍 TERRAIN CLEAN
+        if Terrain then
+            Terrain.WaterWaveSize = 0
+            Terrain.WaterWaveSpeed = 0
+            Terrain.WaterReflectance = 0
+            Terrain.WaterTransparency = 1
+        end
+
+        -- 🐾 REMOVE PETS
         for _, v in pairs(workspace:GetChildren()) do
             if string.sub(v.Name, 1, 3):lower() == "pet" then
                 pcall(function()
                     v:Destroy()
+                end)
+            end
+        end
+
+        -- 💨 REMOVE PARTICLES / EFFECTS
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("ParticleEmitter")
+            or v:IsA("Trail")
+            or v:IsA("Beam") then
+                pcall(function()
+                    v.Enabled = false
                 end)
             end
         end
@@ -884,10 +907,10 @@ local function applyFPSBoost(state)
     end
 end
 
--- 🔁 anti lag loop pet cleaner
+-- 🔁 LOOP CLEAN PETS + EFFECTS
 task.spawn(function()
     while true do
-        if FPSBoost then
+        if ExtremeFPS then
             for _, v in pairs(workspace:GetChildren()) do
                 if string.sub(v.Name, 1, 3):lower() == "pet" then
                     pcall(function()
@@ -900,13 +923,13 @@ task.spawn(function()
     end
 end)
 
--- 🎛️ TOGGLE (1 aja)
-MiscTab:Toggle({
-    Title = "FPS Boost + Hide Pets",
+-- 🎛️ TOGGLE
+local FpsToggle = MiscTab:Toggle({
+    Title = "⚡ Extreme FPS Boost",
     Default = false,
     Callback = function(state)
-        FPSBoost = state
-        applyFPSBoost(state)
+        ExtremeFPS = state
+        applyExtreme(state)
     end
 })
 
@@ -939,6 +962,7 @@ task.defer(function()
     AutoBuyEggToggle:Set(true)
     AutoBuyBaitToggle:Set(true)
     AutoBuyMerchantToggle:Set(true)
+    FpsToggle:Set(true)
 end)
 
 
