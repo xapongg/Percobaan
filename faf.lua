@@ -199,9 +199,25 @@ local MainTab = Window:Tab({
 -- DATA CRAFT
 --// =========================
 local CraftRecipes = {
-    ["DiamondCookie"] = {
-        Submit = {"XpCookie", "GoldenCookie", "PetToy"}
+    ["TimeJumper"] = {
+        Submit = {"TeleportWand","TeleportWand","TeleportWand","TeleportWand","TeleportWand","TeleportWand","TeleportWand","TeleportWand","TeleportWand","TeleportWand","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","MagnifyingGlass","SupremeAutoFeeder"}
     },
+
+    ["DiamondCookie"] = {
+        Submit = {"XpCookie","GoldenCookie","PetToy"}
+    },
+
+    ["NetRetractor"] = {
+        Submit = {"NetMover","NetMover","NetMover","NetMover","NetMover","ExtremeAutoFeeder"}
+    },
+
+    ["YolkBreaker"] = {
+        Submit = {"EggIncubator","EggHatcher","GoldenCookie"}
+    },
+
+    ["ShieldLock"] = {
+        Submit = {"StarLock","StarLock","StarLock","StarLock","StarLock","StarLock","StarLock","StarLock","StarLock","StarLock","TimeJumper","ExtremeAutoFeeder"}
+    }
 }
 
 local SelectedCraft = "DiamondCookie"
@@ -834,6 +850,67 @@ local AutoBaitPackToggle = MainTab:Toggle({
 --// Walk Speed
 --------------------------------------------------
 local MiscTab = Window:Tab({Title = "Misc", Icon = "sfsymbols:wrenchAndScrewdriver"})
+
+local FPSBoost = false
+
+local function applyFPSBoost(state)
+    local Lighting = game:GetService("Lighting")
+
+    if state then
+        -- 🔥 FPS boost visual
+        Lighting.GlobalShadows = false
+        Lighting.FogEnd = 1e10
+        Lighting.Brightness = 1
+
+        for _, v in pairs(Lighting:GetChildren()) do
+            if v:IsA("PostEffect") then
+                v.Enabled = false
+            end
+        end
+
+        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+
+        -- 🐾 clean pets langsung
+        for _, v in pairs(workspace:GetChildren()) do
+            if string.sub(v.Name, 1, 3):lower() == "pet" then
+                pcall(function()
+                    v:Destroy()
+                end)
+            end
+        end
+
+    else
+        settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic
+    end
+end
+
+-- 🔁 anti lag loop pet cleaner
+task.spawn(function()
+    while true do
+        if FPSBoost then
+            for _, v in pairs(workspace:GetChildren()) do
+                if string.sub(v.Name, 1, 3):lower() == "pet" then
+                    pcall(function()
+                        v:Destroy()
+                    end)
+                end
+            end
+        end
+        task.wait(2)
+    end
+end)
+
+-- 🎛️ TOGGLE (1 aja)
+MiscTab:Toggle({
+    Title = "FPS Boost + Hide Pets",
+    Default = false,
+    Callback = function(state)
+        FPSBoost = state
+        applyFPSBoost(state)
+    end
+})
+
+
 
 MiscTab:Slider({
     Title = "Walk Speed",
