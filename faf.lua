@@ -397,9 +397,9 @@ end
 
 
 --------------------------------------------------
---// AUTO FEED ASTRONAUT (FAST LOOP)
+--// AUTO FEED EVENT (FAST LOOP)
 --------------------------------------------------
-local AutoFeedAstronaut = false
+local AutoFeedEvent = false
 
 local FeedRemote = game:GetService("ReplicatedStorage")
     :WaitForChild("rbxts_include")
@@ -408,17 +408,18 @@ local FeedRemote = game:GetService("ReplicatedStorage")
     :WaitForChild("remo")
     :WaitForChild("src")
     :WaitForChild("container")
-    :WaitForChild("moon.feedAstronautAll")
+    :WaitForChild("superhero.feedSuperheroAll")
+    -- :WaitForChild("moon.feedAstronautAll")
 
 local AutoFeedToggle = MainTab:Toggle({
-    Title = "Auto Feed Astronaut",
+    Title = "Auto Feed Event",
     Default = false,
     Callback = function(state)
-        AutoFeedAstronaut = state
+        AutoFeedEvent = state
 
         if state then
 			task.spawn(function()
-				while AutoFeedAstronaut do
+				while AutoFeedEvent do
 					for i = 1, 3 do -- spam 3x per tick
 						pcall(function()
 							FeedRemote:FireServer()
