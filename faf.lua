@@ -460,6 +460,7 @@ local ItemList = {
 	"MutationBeacon",
 	"EggIncubator",
 	"ExtremeAutoFeeder",
+	"GodlyAutoFeeder",
 }
 
 MainTab:Dropdown({
