@@ -6,13 +6,6 @@
 
 
 
-
-
-
-
-
-
-
 --// Services
 local Players = game:GetService("Players")
 local VirtualUser = game:GetService("VirtualUser")
@@ -196,6 +189,8 @@ Window:OnDestroy(function()
     if ScreenGui then
         ScreenGui:Destroy()
     end
+
+    destroyInventoryUI()
 end)
 
 --// TAB MAIN
@@ -406,6 +401,9 @@ local function HandleSelection(values, fullList)
 
     return result
 end
+
+
+
 
 
 --------------------------------------------------
@@ -861,6 +859,160 @@ local AutoBaitPackToggle = MainTab:Toggle({
 })
 
 --------------------------------------------------
+--// INVENTORY DISPLAY UI (MODERN)
+--------------------------------------------------
+local BpTab = Window:Tab({Title = "Backpack", Icon = "sfsymbols:bag"})
+
+
+
+local InventoryUI = nil
+local InventoryRunning = false
+
+local function createInventoryUI()
+    if InventoryUI then return end
+
+    local InvenGui = Instance.new("ScreenGui")
+    InvenGui.Name = "InventoryDisplayUI"
+    InvenGui.ResetOnSpawn = false
+    InvenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.fromOffset(220, 70)
+    Frame.Position = UDim2.new(0.5, -110, 0.15, 0)
+    Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    Frame.BorderSizePixel = 0
+    Frame.Parent = InvenGui
+
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 12)
+
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Thickness = 1
+    Stroke.Color = Color3.fromRGB(80, 80, 80)
+    Stroke.Parent = Frame
+
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, 0, 1, 0)
+    Title.BackgroundTransparency = 1
+    Title.Text = "Inventory: loading..."
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.Font = Enum.Font.GothamSemibold
+    Title.TextSize = 16
+    Title.Parent = Frame
+
+    -- drag
+    local dragging, dragInput, startPos, startInput
+
+    Frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            startPos = Frame.Position
+            startInput = input.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - startInput
+            Frame.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+
+    InventoryUI = {
+        Gui = InvenGui,
+        Label = Title
+    }
+end
+
+
+local function destroyInventoryUI()
+    InventoryRunning = false
+
+    -- destroy referensi kalau ada
+    if InventoryUI and InventoryUI.Gui then
+        InventoryUI.Gui:Destroy()
+    end
+    InventoryUI = nil
+
+    -- 🔥 FORCE CLEAN (INI YANG SERING KELUPA)
+    local pg = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
+    if pg then
+        local gui = pg:FindFirstChild("InventoryDisplayUI")
+        if gui then
+            gui:Destroy()
+        end
+    end
+end
+
+local function getInventoryText()
+    local player = game.Players.LocalPlayer
+    local pg = player:FindFirstChild("PlayerGui")
+    if not pg then return "Inventory: ?" end
+
+    local path = pg:FindFirstChild("toolbar")
+    if not path then return "Inventory: not found" end
+
+    local ok, txt = pcall(function()
+        local label = path
+            .Frame
+            .CanvasGroup
+            .Frame
+            .Frame
+            .Frame
+            .Frame
+            .Frame
+            .TextLabel
+
+        return label.Text
+    end)
+
+    if ok and txt then
+        return txt
+    end
+
+    return "Inventory: error"
+end
+
+local function startInventoryLoop()
+    if InventoryRunning then return end
+    InventoryRunning = true
+
+    task.spawn(function()
+        while InventoryRunning do
+            if InventoryUI then
+                InventoryUI.Label.Text = getInventoryText()
+            end
+            task.wait(0.2)
+        end
+    end)
+end
+
+BpTab:Toggle({
+    Title = "Show Inventory UI",
+    Default = false,
+    Callback = function(state)
+
+        if state then
+            createInventoryUI()
+            startInventoryLoop()
+        else
+            destroyInventoryUI()
+        end
+
+    end
+})
+
+--------------------------------------------------
 --// Walk Speed
 --------------------------------------------------
 local MiscTab = Window:Tab({Title = "Misc", Icon = "sfsymbols:wrenchAndScrewdriver"})
@@ -949,6 +1101,12 @@ local FpsToggle = MiscTab:Toggle({
 
 
 
+local looping = false
+local currentSpeed = 20
+local savedSpeed = nil
+local conn = nil
+
+-- Slider
 MiscTab:Slider({
     Title = "Walk Speed",
     Desc = "Adjust character speed",
@@ -959,12 +1117,49 @@ MiscTab:Slider({
         Default = 20,
     },
     Callback = function(speed)
+        currentSpeed = speed
+    end
+})
+
+-- Toggle
+MiscTab:Toggle({
+    Title = "Enable WalkSpeed Loop",
+    Desc = "Loop mengikuti slider",
+    Default = false,
+    Callback = function(state)
+        looping = state
+
         local player = game.Players.LocalPlayer
         local char = player.Character or player.CharacterAdded:Wait()
         local humanoid = char:FindFirstChildOfClass("Humanoid")
 
-        if humanoid then
-            humanoid.WalkSpeed = speed
+        if not humanoid then return end
+
+        if state then
+            -- simpan speed saat ini (termasuk buff)
+            savedSpeed = humanoid.WalkSpeed
+
+            conn = task.spawn(function()
+                while looping do
+                    local c = player.Character
+                    local h = c and c:FindFirstChildOfClass("Humanoid")
+
+                    if h then
+                        h.WalkSpeed = currentSpeed
+                    end
+
+                    task.wait(0.1)
+                end
+            end)
+
+        else
+            -- stop loop
+            looping = false
+
+            -- restore ke speed sebelum toggle ON (bukan 16)
+            if humanoid and savedSpeed then
+                humanoid.WalkSpeed = savedSpeed
+            end
         end
     end
 })
@@ -1005,6 +1200,10 @@ task.spawn(function()
 		["88785950117411"] = "Blood Moon",
 		["87686114195984"] = "Radioactive",
 		["92048929392817"] = "Ghost",
+		["134106694861110"] = "Aurora",
+		["123550552285357"] = "Starry",
+		["131897766910339"] = "Charged",
+		["92010517589355"] = "Twirly",
 	}
 
     -- 🔥 FILTER ASSET ID (ISI YANG MAU DI-DETECT SAJA)
