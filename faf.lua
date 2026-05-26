@@ -1165,6 +1165,44 @@ MiscTab:Toggle({
 })
 
 
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+
+local LocalPlayer = Players.LocalPlayer
+
+local function RejoinInfinite()
+    local placeId = game.PlaceId
+    local jobId = game.JobId
+
+    local tries = 0
+    local maxTries = math.huge -- infinite
+
+    while true do
+        tries += 1
+
+        local success, err = pcall(function()
+            TeleportService:TeleportToPlaceInstance(placeId, jobId, LocalPlayer)
+        end)
+
+        if success then
+            break
+        end
+
+        warn("[REJOIN FAILED]", tries, err)
+        task.wait(2) -- delay retry biar gak spam keras
+    end
+end
+
+MiscTab:Button({
+    Title = "Rejoin (Infinite)",
+    Desc = "Retry sampai berhasil masuk server",
+    Callback = function()
+        task.spawn(RejoinInfinite)
+    end
+})
+
+
+
 task.defer(function()
     AutoFeedToggle:Set(false) -- tambah ini
     AutoBuyToggle:Set(true)
