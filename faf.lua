@@ -858,6 +858,145 @@ local AutoBaitPackToggle = MainTab:Toggle({
     end
 })
 
+
+--------------------------------------------------
+--// FOOD TRAY
+--------------------------------------------------
+
+local SelectedFoodTray = "SupremeFoodTray"
+
+local FoodTrayList = {
+    "BasicFoodTray",
+    "AdvancedFoodTray",
+    "SupremeFoodTray",
+}
+
+MainTab:Dropdown({
+    Title = "Select Food Tray",
+    Values = FoodTrayList,
+    Multi = false,
+    Value = "SupremeFoodTray",
+    Callback = function(value)
+        SelectedFoodTray = value
+    end
+})
+
+--------------------------------------------------
+--// POSITIONS
+--------------------------------------------------
+
+local MutationBeaconPositions = {
+
+    vector.create(26.362998962402344, -0.012000083923339844, 41.5),
+    vector.create(76.36299896240234,  -0.012000083923339844, 40.5),
+    vector.create(126.36299896240234, -0.012000083923339844, 41.5),
+
+    vector.create(126.36299896240234, -0.012000083923339844, -41.5),
+    vector.create(76.36299896240234,  -0.012000083923339844, -40.5),
+    vector.create(26.362998962402344, -0.012000083923339844, -41.5),
+}
+
+local FoodTrayPositions = {
+    vector.create(10.862998962402344, -0.012000083923339844, 11),
+}
+
+--------------------------------------------------
+--// REMOTE
+--------------------------------------------------
+
+local PlaceBuildingRemote = game:GetService("ReplicatedStorage")
+    :WaitForChild("rbxts_include")
+    :WaitForChild("node_modules")
+    :WaitForChild("@rbxts")
+    :WaitForChild("remo")
+    :WaitForChild("src")
+    :WaitForChild("container")
+    :WaitForChild("ponds.placeBuilding")
+
+--------------------------------------------------
+--// BUTTON PLACE BEACON
+--------------------------------------------------
+
+MainTab:Button({
+    Title = "Place 6 Mutation Beacon",
+    Callback = function()
+
+        if #MutationBeaconPositions == 0 then
+            warn("No beacon positions")
+            return
+        end
+
+        task.spawn(function()
+
+            for _, pos in ipairs(MutationBeaconPositions) do
+
+                pcall(function()
+                    PlaceBuildingRemote:InvokeServer(
+                        "booster",
+                        "MutationBeacon",
+                        pos
+                    )
+                end)
+
+                task.wait(0.15)
+            end
+
+        end)
+    end
+})
+
+--------------------------------------------------
+--// AUTO PLACE FOOD TRAY
+--------------------------------------------------
+
+local AutoPlaceFoodTray = false
+
+MainTab:Toggle({
+    Title = "Auto Place Food Tray (3 Menit)",
+    Default = false,
+    Callback = function(state)
+
+        AutoPlaceFoodTray = state
+
+        if state then
+            task.spawn(function()
+                while AutoPlaceFoodTray do
+
+                    if #FoodTrayPositions == 0 then
+                        warn("No FoodTray positions")
+                        task.wait(5)
+                        continue
+                    end
+
+                    -- PLACE ALL POSITIONS
+                    for _, pos in ipairs(FoodTrayPositions) do
+                        pcall(function()
+                            PlaceBuildingRemote:InvokeServer(
+                                "booster",
+                                SelectedFoodTray,
+                                pos
+                            )
+                        end)
+
+                        task.wait(0.25)
+                    end
+
+                    -- COOLDOWN 3 MENIT
+                    for i = 1, 180 do
+                        if not AutoPlaceFoodTray then
+                            break
+                        end
+
+                        task.wait(1)
+                    end
+
+                end
+            end)
+        end
+    end
+})
+
+
 --------------------------------------------------
 --// INVENTORY DISPLAY UI (MODERN)
 --------------------------------------------------
