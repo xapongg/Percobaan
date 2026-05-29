@@ -438,3 +438,32 @@ MainTab:Toggle({
 })
 
 
+--------------------------------------------------
+--// DESTROY ZOMBIES LOCAL (ANTI LAG)
+--------------------------------------------------
+local RemoveZombies = false
+local ZombiesFolder = workspace:WaitForChild("Zombies_Local")
+
+MainTab:Toggle({
+    Title = "Destroy Zombies Local",
+    Desc = "Hapus zombie local biar ringan",
+    Value = false,
+    Callback = function(state)
+        RemoveZombies = state
+
+        if state then
+            task.spawn(function()
+                while RemoveZombies do
+                    pcall(function()
+                        for _, zombie in ipairs(ZombiesFolder:GetChildren()) do
+                            zombie:Destroy()
+                        end
+                    end)
+
+                    task.wait(0.2)
+                end
+            end)
+        end
+    end
+})
+
