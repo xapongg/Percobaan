@@ -407,3 +407,34 @@ MainTab:Toggle({
 })
 
 
+--------------------------------------------------
+--// AUTO OPEN CRATE
+--------------------------------------------------
+local AutoCrate = false
+local CrateDelay = 0.3 -- 300ms
+
+MainTab:Toggle({
+    Title = "Auto Open Crate",
+    Desc = "Auto buka crate terus menerus",
+    Value = false,
+    Callback = function(state)
+        AutoCrate = state
+
+        if state then
+            task.spawn(function()
+                while AutoCrate do
+                    pcall(function()
+                        game:GetService("ReplicatedStorage")
+                            :WaitForChild("EventRemotes")
+                            :WaitForChild("GalacticRequestSpin")
+                            :InvokeServer()
+                    end)
+
+                    task.wait(CrateDelay)
+                end
+            end)
+        end
+    end
+})
+
+
