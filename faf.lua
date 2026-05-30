@@ -443,261 +443,6 @@ local AutoFeedToggle = MainTab:Toggle({
 })
 
 --------------------------------------------------
---// AUTO BUY ITEM
---------------------------------------------------
-local AutoBuy = false
-local SelectedItems = {}
-
-local ItemList = {
-    "All",
-    "BasicAutoFeeder",
-	"FoodScoop",
-	"BasicFoodTray",
-	"NetMover",
-	"MagnifyingGlass",
-    "AdvancedAutoFeeder",
-	"AdvancedFoodTray",
-	"XpCookie",
-	"TeleportWand",
-	"StarLock",
-    "SupremeAutoFeeder",
-	"PetToy",
-	"TradingTicket",
-	"EggHatcher",
-	"SupremeFoodTray",
-    "PetWhistle",
-	"GoldenCookie",
-	"MutationBeacon",
-	"EggIncubator",
-	"ExtremeAutoFeeder",
-	"GodlyAutoFeeder",
-}
-
-MainTab:Dropdown({
-    Title = "Select Items",
-    Values = ItemList,
-    Multi = true,
-    Value = {"All"},
-    Callback = function(values)
-        SelectedItems = HandleSelection(values, ItemList)
-    end
-})
-
-local AutoBuyToggle = MainTab:Toggle({
-    Title = "Auto Buy Items",
-    Default = false,
-    Callback = function(state)
-        AutoBuy = state
-
-        if state then
-            task.spawn(function()
-                while AutoBuy do
-                    task.wait(0.1)
-
-                    for _, item in pairs(SelectedItems) do
-                        pcall(function()
-                            game:GetService("ReplicatedStorage")
-                                :WaitForChild("rbxts_include")
-                                :WaitForChild("node_modules")
-                                :WaitForChild("@rbxts")
-                                :WaitForChild("remo")
-                                :WaitForChild("src")
-                                :WaitForChild("container")
-                                :WaitForChild("shop.purchaseGear")
-                                :FireServer(item)
-                        end)
-                        task.wait(0.05)
-                    end
-                end
-            end)
-        end
-    end
-})
-
---------------------------------------------------
---// AUTO BUY EGG
---------------------------------------------------
-local AutoBuyEgg = false
-local SelectedEggs = {}
-
-local EggList = {
-    "All",
-    "Starter",
-	"Novice",
-	"Forest",
-	"Polar",
-	"Tropical",
-	"Exotic",
-}
-
-MainTab:Dropdown({
-    Title = "Select Eggs",
-    Values = EggList,
-    Multi = true,
-    Value = {"Polar", "Tropical", "Exotic"},
-    Callback = function(values)
-        SelectedEggs = HandleSelection(values, EggList)
-    end
-})
-
-local AutoBuyEggToggle = MainTab:Toggle({
-    Title = "Auto Buy Egg",
-    Default = false,
-    Callback = function(state)
-        AutoBuyEgg = state
-
-        if state then
-            task.spawn(function()
-                while AutoBuyEgg do
-                    task.wait(0.1)
-
-                    for _, egg in pairs(SelectedEggs) do
-                        pcall(function()
-                            game:GetService("ReplicatedStorage")
-                                :WaitForChild("rbxts_include")
-                                :WaitForChild("node_modules")
-                                :WaitForChild("@rbxts")
-                                :WaitForChild("remo")
-                                :WaitForChild("src")
-                                :WaitForChild("container")
-                                :WaitForChild("shop.purchaseEgg")
-                                :FireServer(egg)
-                        end)
-                        task.wait(0.05)
-                    end
-                end
-            end)
-        end
-    end
-})
-
---------------------------------------------------
---// AUTO BUY BAIT
---------------------------------------------------
-local AutoBuyBait = false
-local SelectedBaits = {}
-
-local BaitList = {
-    "All",
-    "Koi",
-    "River",
-    "Puffer",
-    "Glo",
-    "Seal",
-    "Ray",
-    "Octopus",
-    "Axolotl",
-    "Jelly",
-	"Whale",
-	"Squid",
-	"Shark",
-	"Megalodon",
-    "Kraken",
-	"Maja",
-	"Bloop",
-	"OceanEater",
-}
-
-MainTab:Dropdown({
-    Title = "Select Baits",
-    Values = BaitList,
-    Multi = true,
-	Value = {"All"},
-    Callback = function(values)
-        SelectedBaits = HandleSelection(values, BaitList)
-    end
-})
-
-local AutoBuyBaitToggle = MainTab:Toggle({
-    Title = "Auto Buy Bait",
-    Default = false,
-    Callback = function(state)
-        AutoBuyBait = state
-
-        if state then
-            task.spawn(function()
-                while AutoBuyBait do
-                    task.wait(0.1)
-
-                    for _, bait in pairs(SelectedBaits) do
-                        pcall(function()
-                            game:GetService("ReplicatedStorage")
-                                :WaitForChild("rbxts_include")
-                                :WaitForChild("node_modules")
-                                :WaitForChild("@rbxts")
-                                :WaitForChild("remo")
-                                :WaitForChild("src")
-                                :WaitForChild("container")
-                                :WaitForChild("shop.purchaseBait")
-                                :FireServer(bait)
-                        end)
-                        task.wait(0.05)
-                    end
-                end
-            end)
-        end
-    end
-})
-
---------------------------------------------------
---// AUTO BUY MERCHANT
---------------------------------------------------
-local AutoBuyMerchant = false
-local SelectedMerchantItems = {}
-
--- List (isi sendiri nanti)
-local MerchantList = {
-    "All",
-    "Wild",
-    "Punk",
-    "Boba",
-    "Ashen",
-    -- tambah di sini
-}
-
-MainTab:Dropdown({
-    Title = "Select Merchant Items",
-    Values = MerchantList,
-    Multi = true,
-    Value = {"All"},
-    Callback = function(values)
-        SelectedMerchantItems = HandleSelection(values, MerchantList)
-    end
-})
-
-local AutoBuyMerchantToggle = MainTab:Toggle({
-    Title = "Auto Buy Merchant",
-    Default = false,
-    Callback = function(state)
-        AutoBuyMerchant = state
-
-        if state then
-            task.spawn(function()
-                while AutoBuyMerchant do
-                    task.wait(0.1)
-
-                    for _, item in pairs(SelectedMerchantItems) do
-                        pcall(function()
-                            game:GetService("ReplicatedStorage")
-                                :WaitForChild("rbxts_include")
-                                :WaitForChild("node_modules")
-                                :WaitForChild("@rbxts")
-                                :WaitForChild("remo")
-                                :WaitForChild("src")
-                                :WaitForChild("container")
-                                :WaitForChild("merchant.purchaseItem")
-                                :FireServer("travelling", item)
-                        end)
-
-                        task.wait(0.05)
-                    end
-                end
-            end)
-        end
-    end
-})
-
---------------------------------------------------
 --// SELL ALL (FIXED)
 --------------------------------------------------
 local SellRemote = ReplicatedStorage
@@ -858,7 +603,6 @@ local AutoBaitPackToggle = MainTab:Toggle({
     end
 })
 
-
 --------------------------------------------------
 --// FOOD TRAY
 --------------------------------------------------
@@ -995,6 +739,267 @@ MainTab:Toggle({
         end
     end
 })
+
+
+
+--------------------------------------------------
+--// AUTO BUY ITEM
+--------------------------------------------------
+local ShopTab = Window:Tab({Title = "Shop", Icon = "sfsymbols:cart"})
+
+
+local AutoBuy = false
+local SelectedItems = {}
+
+local ItemList = {
+    "All",
+    "BasicAutoFeeder",
+	"FoodScoop",
+	"BasicFoodTray",
+	"NetMover",
+	"MagnifyingGlass",
+    "AdvancedAutoFeeder",
+	"AdvancedFoodTray",
+	"XpCookie",
+	"TeleportWand",
+	"StarLock",
+    "SupremeAutoFeeder",
+	"PetToy",
+	"TradingTicket",
+	"EggHatcher",
+	"SupremeFoodTray",
+    "PetWhistle",
+	"GoldenCookie",
+	"MutationBeacon",
+	"EggIncubator",
+	"ExtremeAutoFeeder",
+	"GodlyAutoFeeder",
+}
+
+ShopTab:Dropdown({
+    Title = "Select Items",
+    Values = ItemList,
+    Multi = true,
+    Value = {"All"},
+    Callback = function(values)
+        SelectedItems = HandleSelection(values, ItemList)
+    end
+})
+
+local AutoBuyToggle = ShopTab:Toggle({
+    Title = "Auto Buy Items",
+    Default = false,
+    Callback = function(state)
+        AutoBuy = state
+
+        if state then
+            task.spawn(function()
+                while AutoBuy do
+                    task.wait(0.1)
+
+                    for _, item in pairs(SelectedItems) do
+                        pcall(function()
+                            game:GetService("ReplicatedStorage")
+                                :WaitForChild("rbxts_include")
+                                :WaitForChild("node_modules")
+                                :WaitForChild("@rbxts")
+                                :WaitForChild("remo")
+                                :WaitForChild("src")
+                                :WaitForChild("container")
+                                :WaitForChild("shop.purchaseGear")
+                                :FireServer(item)
+                        end)
+                        task.wait(0.05)
+                    end
+                end
+            end)
+        end
+    end
+})
+
+--------------------------------------------------
+--// AUTO BUY EGG
+--------------------------------------------------
+local AutoBuyEgg = false
+local SelectedEggs = {}
+
+local EggList = {
+    "All",
+    "Starter",
+	"Novice",
+	"Forest",
+	"Polar",
+	"Tropical",
+	"Exotic",
+}
+
+ShopTab:Dropdown({
+    Title = "Select Eggs",
+    Values = EggList,
+    Multi = true,
+    Value = {"Polar", "Tropical", "Exotic"},
+    Callback = function(values)
+        SelectedEggs = HandleSelection(values, EggList)
+    end
+})
+
+local AutoBuyEggToggle = ShopTab:Toggle({
+    Title = "Auto Buy Egg",
+    Default = false,
+    Callback = function(state)
+        AutoBuyEgg = state
+
+        if state then
+            task.spawn(function()
+                while AutoBuyEgg do
+                    task.wait(0.1)
+
+                    for _, egg in pairs(SelectedEggs) do
+                        pcall(function()
+                            game:GetService("ReplicatedStorage")
+                                :WaitForChild("rbxts_include")
+                                :WaitForChild("node_modules")
+                                :WaitForChild("@rbxts")
+                                :WaitForChild("remo")
+                                :WaitForChild("src")
+                                :WaitForChild("container")
+                                :WaitForChild("shop.purchaseEgg")
+                                :FireServer(egg)
+                        end)
+                        task.wait(0.05)
+                    end
+                end
+            end)
+        end
+    end
+})
+
+--------------------------------------------------
+--// AUTO BUY BAIT
+--------------------------------------------------
+local AutoBuyBait = false
+local SelectedBaits = {}
+
+local BaitList = {
+    "All",
+    "Koi",
+    "River",
+    "Puffer",
+    "Glo",
+    "Seal",
+    "Ray",
+    "Octopus",
+    "Axolotl",
+    "Jelly",
+	"Whale",
+	"Squid",
+	"Shark",
+	"Megalodon",
+    "Kraken",
+	"Maja",
+	"Bloop",
+	"OceanEater",
+}
+
+ShopTab:Dropdown({
+    Title = "Select Baits",
+    Values = BaitList,
+    Multi = true,
+	Value = {"All"},
+    Callback = function(values)
+        SelectedBaits = HandleSelection(values, BaitList)
+    end
+})
+
+local AutoBuyBaitToggle = ShopTab:Toggle({
+    Title = "Auto Buy Bait",
+    Default = false,
+    Callback = function(state)
+        AutoBuyBait = state
+
+        if state then
+            task.spawn(function()
+                while AutoBuyBait do
+                    task.wait(0.1)
+
+                    for _, bait in pairs(SelectedBaits) do
+                        pcall(function()
+                            game:GetService("ReplicatedStorage")
+                                :WaitForChild("rbxts_include")
+                                :WaitForChild("node_modules")
+                                :WaitForChild("@rbxts")
+                                :WaitForChild("remo")
+                                :WaitForChild("src")
+                                :WaitForChild("container")
+                                :WaitForChild("shop.purchaseBait")
+                                :FireServer(bait)
+                        end)
+                        task.wait(0.05)
+                    end
+                end
+            end)
+        end
+    end
+})
+
+--------------------------------------------------
+--// AUTO BUY MERCHANT
+--------------------------------------------------
+local AutoBuyMerchant = false
+local SelectedMerchantItems = {}
+
+-- List (isi sendiri nanti)
+local MerchantList = {
+    "All",
+    "Wild",
+    "Punk",
+    "Boba",
+    "Ashen",
+    -- tambah di sini
+}
+
+ShopTab:Dropdown({
+    Title = "Select Merchant Items",
+    Values = MerchantList,
+    Multi = true,
+    Value = {"All"},
+    Callback = function(values)
+        SelectedMerchantItems = HandleSelection(values, MerchantList)
+    end
+})
+
+local AutoBuyMerchantToggle = ShopTab:Toggle({
+    Title = "Auto Buy Merchant",
+    Default = false,
+    Callback = function(state)
+        AutoBuyMerchant = state
+
+        if state then
+            task.spawn(function()
+                while AutoBuyMerchant do
+                    task.wait(0.1)
+
+                    for _, item in pairs(SelectedMerchantItems) do
+                        pcall(function()
+                            game:GetService("ReplicatedStorage")
+                                :WaitForChild("rbxts_include")
+                                :WaitForChild("node_modules")
+                                :WaitForChild("@rbxts")
+                                :WaitForChild("remo")
+                                :WaitForChild("src")
+                                :WaitForChild("container")
+                                :WaitForChild("merchant.purchaseItem")
+                                :FireServer("travelling", item)
+                        end)
+
+                        task.wait(0.05)
+                    end
+                end
+            end)
+        end
+    end
+})
+
 
 
 --------------------------------------------------
@@ -1302,44 +1307,6 @@ MiscTab:Toggle({
         end
     end
 })
-
-
-local TeleportService = game:GetService("TeleportService")
-local Players = game:GetService("Players")
-
-local LocalPlayer = Players.LocalPlayer
-
-local function RejoinInfinite()
-    local placeId = game.PlaceId
-    local jobId = game.JobId
-
-    local tries = 0
-    local maxTries = math.huge -- infinite
-
-    while true do
-        tries += 1
-
-        local success, err = pcall(function()
-            TeleportService:TeleportToPlaceInstance(placeId, jobId, LocalPlayer)
-        end)
-
-        if success then
-            break
-        end
-
-        warn("[REJOIN FAILED]", tries, err)
-        task.wait(2) -- delay retry biar gak spam keras
-    end
-end
-
-MiscTab:Button({
-    Title = "Rejoin (Infinite)",
-    Desc = "Retry sampai berhasil masuk server",
-    Callback = function()
-        task.spawn(RejoinInfinite)
-    end
-})
-
 
 
 task.defer(function()
