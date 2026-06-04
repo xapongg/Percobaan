@@ -571,22 +571,29 @@ MainTab:Toggle({
         DeleteOtherPlots = Value
 
         task.spawn(function()
+            local MyPlot = GetMyPlot()
+            if not MyPlot then
+                WindUI:Notify({
+                    Title = "Error",
+                    Content = "My plot not found!",
+                    Duration = 3
+                })
+                return
+            end
+
             while DeleteOtherPlots do
                 for _, Plot in ipairs(workspace.Plots:GetChildren()) do
-                    pcall(function()
-                        -- Skip player's own plot
-                        local Label = Plot.Sign.owner_text.UI.Frame.ownername
-                        if Label and Label.Text:lower() ~= LocalPlayer.Name:lower().."'s plot" then
+                    if Plot ~= MyPlot then
+                        pcall(function()
                             Plot:Destroy()
-                        end
-                    end)
+                        end)
+                    end
                 end
-                task.wait(5) -- avoid heavy loop
+                task.wait(5)
             end
         end)
     end
 })
-
 
 --------------------------------------------------
 -- DELETE MY COWS & BABIES TOGGLE
@@ -619,7 +626,7 @@ MainTab:Toggle({
                         end
                     end
                 end
-                task.wait(5) -- every 5 seconds
+                task.wait(5)
             end
         end)
     end
