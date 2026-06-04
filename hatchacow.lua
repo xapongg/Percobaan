@@ -460,3 +460,167 @@ MainTab:Toggle({
         end)
     end
 })
+
+
+--------------------------------------------------
+-- FPS BOOST
+--------------------------------------------------
+local FPSBoost = false
+
+MainTab:Toggle({
+    Title = "FPS Boost",
+    Default = false,
+    Callback = function(Value)
+        FPSBoost = Value
+
+        if not Value then
+            return
+        end
+
+        task.spawn(function()
+
+            -- Remove Rocks
+            pcall(function()
+                local Rocks = workspace.Environment:FindFirstChild("Rocks")
+                if Rocks then
+                    Rocks:ClearAllChildren()
+                end
+            end)
+
+            -- Remove Trees
+            pcall(function()
+                local Trees = workspace.Environment:FindFirstChild("Trees")
+                if Trees then
+                    Trees:ClearAllChildren()
+                end
+            end)
+
+            -- Lighting Optimization
+            pcall(function()
+                local Lighting = game:GetService("Lighting")
+
+                Lighting.GlobalShadows = false
+                Lighting.FogEnd = 9e9
+                Lighting.Brightness = 0
+
+                if Lighting:FindFirstChildOfClass("BloomEffect") then
+                    Lighting:FindFirstChildOfClass("BloomEffect").Enabled = false
+                end
+
+                if Lighting:FindFirstChildOfClass("BlurEffect") then
+                    Lighting:FindFirstChildOfClass("BlurEffect").Enabled = false
+                end
+
+                if Lighting:FindFirstChildOfClass("SunRaysEffect") then
+                    Lighting:FindFirstChildOfClass("SunRaysEffect").Enabled = false
+                end
+
+                if Lighting:FindFirstChildOfClass("ColorCorrectionEffect") then
+                    Lighting:FindFirstChildOfClass("ColorCorrectionEffect").Enabled = false
+                end
+            end)
+
+            -- Workspace Optimization
+            for _, v in ipairs(workspace:GetDescendants()) do
+
+                pcall(function()
+
+                    if v:IsA("BasePart") then
+                        v.Material = Enum.Material.SmoothPlastic
+                        v.Reflectance = 0
+                        v.CastShadow = false
+                    end
+
+                    if v:IsA("Decal")
+                    or v:IsA("Texture") then
+                        v:Destroy()
+                    end
+
+                    if v:IsA("ParticleEmitter")
+                    or v:IsA("Trail")
+                    or v:IsA("Beam")
+                    or v:IsA("Smoke")
+                    or v:IsA("Fire")
+                    or v:IsA("Sparkles") then
+                        v.Enabled = false
+                    end
+
+                end)
+
+            end
+
+            WindUI:Notify({
+                Title = "FPS Boost",
+                Content = "FPS Boost Applied",
+                Duration = 5
+            })
+
+        end)
+    end
+})
+
+--------------------------------------------------
+-- DELETE OTHER PLOTS TOGGLE
+--------------------------------------------------
+local DeleteOtherPlots = false
+
+MainTab:Toggle({
+    Title = "Delete Other Plots",
+    Default = false,
+    Callback = function(Value)
+        DeleteOtherPlots = Value
+
+        task.spawn(function()
+            while DeleteOtherPlots do
+                for _, Plot in ipairs(workspace.Plots:GetChildren()) do
+                    pcall(function()
+                        -- Skip player's own plot
+                        local Label = Plot.Sign.owner_text.UI.Frame.ownername
+                        if Label and Label.Text:lower() ~= LocalPlayer.Name:lower().."'s plot" then
+                            Plot:Destroy()
+                        end
+                    end)
+                end
+                task.wait(5) -- avoid heavy loop
+            end
+        end)
+    end
+})
+
+
+--------------------------------------------------
+-- DELETE MY COWS & BABIES TOGGLE
+--------------------------------------------------
+local DeleteMyAnimals = false
+
+MainTab:Toggle({
+    Title = "Delete My Cows & Babies",
+    Default = false,
+    Callback = function(Value)
+        DeleteMyAnimals = Value
+
+        task.spawn(function()
+            while DeleteMyAnimals do
+                local MyPlot = GetMyPlot()
+                if MyPlot then
+                    for _, Floor in ipairs(MyPlot:GetChildren()) do
+                        if Floor.Name:match("^Floor%d+$") then
+                            for _, Stable in ipairs(Floor:GetChildren()) do
+                                if Stable.Name:match("^Stable%d+$") then
+                                    for _, Animal in ipairs(Stable:GetChildren()) do
+                                        if Animal.Name:match("^Cow_") or Animal.Name:match("^Baby_") then
+                                            pcall(function()
+                                                Animal:Destroy()
+                                            end)
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+                task.wait(5) -- every 5 seconds
+            end
+        end)
+    end
+})
