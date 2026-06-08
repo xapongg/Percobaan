@@ -461,6 +461,28 @@ MainTab:Toggle({
     end
 })
 
+local AutoSell = false
+
+MainTab:Toggle({
+    Title = "Auto Sell",
+    Default = false,
+    Callback = function(Value)
+        AutoSell = Value
+
+        if Value then
+            task.spawn(function()
+                local SellRemote = game:GetService("ReplicatedStorage")
+                    :WaitForChild("Remotes")
+                    :WaitForChild("SellRequest")
+
+                while AutoSell do
+                    SellRemote:FireServer("hand")
+                    task.wait(0.1) -- interval sell
+                end
+            end)
+        end
+    end
+})
 
 --------------------------------------------------
 -- FPS BOOST
@@ -627,6 +649,736 @@ MainTab:Toggle({
                     end
                 end
                 task.wait(5)
+            end
+        end)
+    end
+})
+
+--------------------------------------------------
+-- AUTO FEED COWS (CHECK HUNGRY ONLY)
+--------------------------------------------------
+
+local AutoFeed = false
+local ExcludedFloors = {}
+
+MainTab:Dropdown({
+    Title = "Exclude Floor",
+    Values = {
+        "Floor1","Floor2","Floor3","Floor4","Floor5",
+        "Floor6","Floor7","Floor8","Floor9","Floor10","Floor11","Floor12"
+    },
+    Multi = true,
+    Value = {"Floor1","Floor2","Floor3","Floor4"},
+    Callback = function(Value)
+        ExcludedFloors = Value or {}
+    end
+})
+
+local function isExcluded(floorName)
+    for _, v in ipairs(ExcludedFloors) do
+        if v == floorName then
+            return true
+        end
+    end
+    return false
+end
+
+local function firePrompt(prompt)
+    if fireproximityprompt then
+        fireproximityprompt(prompt)
+    else
+        prompt:InputHoldBegin()
+        task.wait(0.1)
+        prompt:InputHoldEnd()
+    end
+end
+
+local function CowNeedsFood(cow)
+    local anchor = cow:FindFirstChild("BillboardAnchor")
+    if not anchor then
+        return false
+    end
+
+    return not anchor:FindFirstChild("FedCowBillboard")
+end
+
+MainTab:Toggle({
+    Title = "Auto Feed Hungry Cows",
+    Default = false,
+    Callback = function(Value)
+        AutoFeed = Value
+
+        if not Value then
+            return
+        end
+
+        task.spawn(function()
+
+            while AutoFeed do
+
+                local MyPlot = GetMyPlot()
+
+                if MyPlot then
+
+                    local Character = game.Players.LocalPlayer.Character
+                    local HRP = Character and Character:FindFirstChild("HumanoidRootPart")
+
+                    if HRP then
+
+                        for floorIndex = 1, 50 do
+
+                            if not AutoFeed then
+                                break
+                            end
+
+                            local Floor = MyPlot:FindFirstChild("Floor" .. floorIndex)
+
+                            if not Floor then
+                                break
+                            end
+
+                            if isExcluded(Floor.Name) then
+                                continue
+                            end
+
+                            for _, obj in ipairs(Floor:GetDescendants()) do
+
+                                if not AutoFeed then
+                                    break
+                                end
+
+                                if obj:IsA("ProximityPrompt")
+                                and obj.Name == "PickupPrompt" then
+
+                                    local Cow = obj:FindFirstAncestorOfClass("Model")
+
+                                    if Cow
+                                    and Cow.Name:match("^Cow_")
+                                    and CowNeedsFood(Cow) then
+
+                                        -- teleport cepat
+                                        HRP.CFrame = Cow:GetPivot()
+
+                                        task.wait(0.15)
+
+                                        pcall(function()
+                                            obj.HoldDuration = 0
+                                            obj.RequiresLineOfSight = false
+                                            obj.MaxActivationDistance = 10
+                                        end)
+
+                                        -- trigger prompt
+                                        firePrompt(obj)
+
+                                        task.wait(0.15)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+
+                -- jeda sebelum scan ulang
+                task.wait(2)
+            end
+        end)
+    end
+})
+
+local AutoFeedManual = false
+local FedCache = {}
+
+MainTab:Toggle({
+    Title = "Auto Feed Manual",
+    Default = false,
+    Callback = function(Value)
+        AutoFeedManual = Value
+
+        if not Value then
+            table.clear(FedCache)
+            return
+        end
+
+        task.spawn(function()
+
+            while AutoFeedManual do
+
+                local MyPlot = GetMyPlot()
+
+                if MyPlot then
+
+                    local Character = LocalPlayer.Character
+                    local HRP = Character and Character:FindFirstChild("HumanoidRootPart")
+
+                    if HRP then
+
+                        for _, obj in ipairs(MyPlot:GetDescendants()) do
+
+                            if obj:IsA("ProximityPrompt")
+                            and obj.Name == "PickupPrompt" then
+
+                                local Cow = obj:FindFirstAncestorOfClass("Model")
+
+                                if Cow
+                                and Cow.Name:match("^Cow_")
+                                and CowNeedsFood(Cow)
+                                and not FedCache[Cow] then
+
+                                    local PromptPart = obj.Parent
+
+                                    if PromptPart
+                                    and PromptPart:IsA("BasePart")
+                                    and (HRP.Position - PromptPart.Position).Magnitude <= 10 then
+
+                                        obj.HoldDuration = 0
+                                        obj.RequiresLineOfSight = false
+                                        obj.MaxActivationDistance = 10
+
+                                        FedCache[Cow] = true
+                                        firePrompt(obj)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+
+                -- reset cache kalau sapi lapar lagi
+                for Cow in pairs(FedCache) do
+                    if not Cow or not Cow.Parent or CowNeedsFood(Cow) then
+                        FedCache[Cow] = nil
+                    end
+                end
+
+                task.wait(1)
+            end
+        end)
+    end
+})
+
+--------------------------------------------------
+-- PLAYER ESP (TRACER + DISTANCE)
+--------------------------------------------------
+
+local ESPEnabled = false
+local ESPObjects = {}
+
+local function RemoveESP()
+    for _, ESP in pairs(ESPObjects) do
+        pcall(function()
+            if ESP.Line then
+                ESP.Line:Remove()
+            end
+
+            if ESP.Text then
+                ESP.Text:Remove()
+            end
+        end)
+    end
+
+    table.clear(ESPObjects)
+end
+
+Players.PlayerRemoving:Connect(function(Player)
+
+    local ESP = ESPObjects[Player]
+
+    if ESP then
+
+        pcall(function()
+            ESP.Line:Remove()
+            ESP.Text:Remove()
+        end)
+
+        ESPObjects[Player] = nil
+    end
+end)
+
+MainTab:Toggle({
+    Title = "Player ESP",
+    Default = false,
+    Callback = function(Value)
+
+        ESPEnabled = Value
+
+        if not Value then
+            RemoveESP()
+            return
+        end
+
+        task.spawn(function()
+
+            while ESPEnabled do
+
+                local MyCharacter = LocalPlayer.Character
+                local MyHRP = MyCharacter and MyCharacter:FindFirstChild("HumanoidRootPart")
+
+                if MyHRP then
+
+                    local MyPos = Camera:WorldToViewportPoint(MyHRP.Position)
+
+                    for _, Player in ipairs(Players:GetPlayers()) do
+
+                        if Player ~= LocalPlayer then
+
+                            local Character = Player.Character
+                            local HRP = Character and Character:FindFirstChild("HumanoidRootPart")
+
+                            if HRP then
+
+                                if not ESPObjects[Player] then
+
+                                    local Line = Drawing.new("Line")
+                                    Line.Thickness = 1.5
+                                    Line.Color = Color3.fromRGB(255,255,255)
+                                    Line.Transparency = 1
+
+                                    local Text = Drawing.new("Text")
+                                    Text.Size = 14
+                                    Text.Center = true
+                                    Text.Outline = true
+                                    Text.Color = Color3.fromRGB(255,255,255)
+
+                                    ESPObjects[Player] = {
+                                        Line = Line,
+                                        Text = Text
+                                    }
+                                end
+
+                                local ESP = ESPObjects[Player]
+
+                                local RootPos = Camera:WorldToViewportPoint(HRP.Position)
+
+                                local ScreenSize = Camera.ViewportSize
+
+                                local X = math.clamp(
+                                    RootPos.X,
+                                    0,
+                                    ScreenSize.X
+                                )
+
+                                local Y = math.clamp(
+                                    RootPos.Y,
+                                    0,
+                                    ScreenSize.Y
+                                )
+
+                                local Distance = math.floor(
+                                    (MyHRP.Position - HRP.Position).Magnitude
+                                )
+
+                                ESP.Line.From = Vector2.new(
+                                    MyPos.X,
+                                    MyPos.Y
+                                )
+
+                                ESP.Line.To = Vector2.new(
+                                    X,
+                                    Y
+                                )
+
+                                ESP.Line.Visible = true
+
+                                ESP.Text.Text =
+                                    Player.Name ..
+                                    " [" .. Distance .. " studs]"
+
+                                ESP.Text.Position = Vector2.new(
+                                    X,
+                                    Y - 18
+                                )
+
+                                ESP.Text.Visible = true
+
+                            else
+
+                                if ESPObjects[Player] then
+                                    ESPObjects[Player].Line.Visible = false
+                                    ESPObjects[Player].Text.Visible = false
+                                end
+                            end
+                        end
+                    end
+                end
+
+                task.wait()
+            end
+
+            RemoveESP()
+        end)
+    end
+})
+
+--------------------------------------------------
+-- CHEST ESP
+--------------------------------------------------
+
+local ChestESP = false
+local ChestESPObjects = {}
+
+local function ClearChestESP()
+    for _, ESP in pairs(ChestESPObjects) do
+        pcall(function()
+            ESP.Line:Remove()
+            ESP.Text:Remove()
+        end)
+    end
+
+    table.clear(ChestESPObjects)
+end
+
+MainTab:Toggle({
+    Title = "Chest ESP",
+    Default = false,
+    Callback = function(Value)
+
+        ChestESP = Value
+
+        if not Value then
+            ClearChestESP()
+            return
+        end
+
+        task.spawn(function()
+
+            while ChestESP do
+
+                local Character = LocalPlayer.Character
+                local HRP = Character and Character:FindFirstChild("HumanoidRootPart")
+
+                if HRP then
+
+                    local MyPos = Camera:WorldToViewportPoint(HRP.Position)
+
+                    local ChestFolder = workspace:FindFirstChild("ChestSpawns")
+
+                    if ChestFolder then
+
+                        for _, Chest in ipairs(ChestFolder:GetChildren()) do
+
+                            local Prompt = Chest:FindFirstChild("ChestPrompt")
+
+                            if Prompt then
+
+                                if not ChestESPObjects[Chest] then
+
+                                    local Line = Drawing.new("Line")
+                                    Line.Thickness = 1.5
+                                    Line.Color = Color3.fromRGB(255, 0, 0)
+                                    Line.Transparency = 1
+
+                                    local Text = Drawing.new("Text")
+                                    Text.Size = 14
+                                    Text.Center = true
+                                    Text.Outline = true
+                                    Text.Color = Color3.fromRGB(255, 0, 0)
+
+                                    ChestESPObjects[Chest] = {
+                                        Line = Line,
+                                        Text = Text
+                                    }
+                                end
+
+                                local ESP = ChestESPObjects[Chest]
+
+                                local ChestPos = Chest:GetPivot().Position
+
+                                local ScreenPos, Visible =
+                                    Camera:WorldToViewportPoint(ChestPos)
+
+                                local Distance = math.floor(
+                                    (HRP.Position - ChestPos).Magnitude
+                                )
+
+                                ESP.Line.From = Vector2.new(
+                                    MyPos.X,
+                                    MyPos.Y
+                                )
+
+                                ESP.Line.To = Vector2.new(
+                                    ScreenPos.X,
+                                    ScreenPos.Y
+                                )
+
+                                ESP.Line.Visible = true
+
+                                ESP.Text.Text =
+                                    "Chest [" .. Distance .. "]"
+
+                                ESP.Text.Position = Vector2.new(
+                                    ScreenPos.X,
+                                    ScreenPos.Y - 18
+                                )
+
+                                ESP.Text.Visible = Visible
+
+                            elseif ChestESPObjects[Chest] then
+
+                                ChestESPObjects[Chest].Line.Visible = false
+                                ChestESPObjects[Chest].Text.Visible = false
+                            end
+                        end
+
+                        -- cleanup chest yg hilang
+                        for Chest, ESP in pairs(ChestESPObjects) do
+                            if not Chest or not Chest.Parent then
+
+                                ESP.Line:Remove()
+                                ESP.Text:Remove()
+
+                                ChestESPObjects[Chest] = nil
+                            end
+                        end
+                    end
+                end
+
+                task.wait()
+            end
+
+            ClearChestESP()
+        end)
+    end
+})
+
+MainTab:Button({
+    Title = "Teleport To Chest (Instant)",
+    Callback = function()
+
+        local Character = LocalPlayer.Character
+        local HRP = Character and Character:FindFirstChild("HumanoidRootPart")
+
+        if not HRP then return end
+
+        local ChestFolder = workspace:FindFirstChild("ChestSpawns")
+        if not ChestFolder then return end
+
+        local ClosestChest = nil
+        local ClosestDistance = math.huge
+
+        -- cari chest aktif (punya ChestPrompt)
+        for _, Chest in ipairs(ChestFolder:GetChildren()) do
+            local Prompt = Chest:FindFirstChild("ChestPrompt")
+
+            if Prompt then
+                local Pos = Chest:GetPivot().Position
+                local Dist = (HRP.Position - Pos).Magnitude
+
+                if Dist < ClosestDistance then
+                    ClosestDistance = Dist
+                    ClosestChest = Chest
+                end
+            end
+        end
+
+        if not ClosestChest then
+            WindUI:Notify({
+                Title = "Chest",
+                Content = "No active chest found",
+                Duration = 3
+            })
+            return
+        end
+
+        -- teleport
+        HRP.CFrame = ClosestChest:GetPivot() + Vector3.new(0, 3, 0)
+
+        task.wait(0.15) -- kasih waktu render setelah teleport
+
+        local Prompt = ClosestChest:FindFirstChild("ChestPrompt", true)
+
+        if Prompt then
+
+            Prompt.HoldDuration = 0
+            Prompt.RequiresLineOfSight = false
+            Prompt.MaxActivationDistance = 999
+
+            task.wait() -- 1 frame extra stabilisasi
+
+            pcall(function()
+                if fireproximityprompt then
+                    fireproximityprompt(Prompt)
+                else
+                    Prompt:InputHoldBegin()
+                    task.wait()
+                    Prompt:InputHoldEnd()
+                end
+            end)
+        end
+
+        WindUI:Notify({
+            Title = "Success",
+            Content = "Teleported & opened chest instantly",
+            Duration = 3
+        })
+
+    end
+})
+
+local AutoChest = false
+
+MainTab:Toggle({
+    Title = "Auto Chest (Fast)",
+    Default = false,
+    Callback = function(Value)
+
+        AutoChest = Value
+
+        if not Value then return end
+
+        task.spawn(function()
+
+            while AutoChest do
+
+                local Character = LocalPlayer.Character
+                local HRP = Character and Character:FindFirstChild("HumanoidRootPart")
+
+                if HRP then
+
+                    local ChestFolder = workspace:FindFirstChild("ChestSpawns")
+
+                    if ChestFolder then
+
+                        for _, Chest in ipairs(ChestFolder:GetChildren()) do
+
+                            if not AutoChest then break end
+
+                            local Prompt = Chest:FindFirstChild("ChestPrompt", true)
+
+                            if Prompt then
+
+                                local Pos = Chest:GetPivot().Position
+
+                                -- teleport "silent" (no delay feel)
+                                HRP.CFrame = CFrame.new(Pos + Vector3.new(0, 2, 0))
+
+                                -- kecil delay biar server register
+                                task.wait(0.25)
+
+                                pcall(function()
+                                    Prompt.HoldDuration = 0
+                                    Prompt.RequiresLineOfSight = false
+                                    Prompt.MaxActivationDistance = 10
+
+                                    if fireproximityprompt then
+                                        fireproximityprompt(Prompt)
+                                    else
+                                        Prompt:InputHoldBegin()
+                                        Prompt:InputHoldEnd()
+                                    end
+                                end)
+
+                                task.wait(0.05) -- super fast loop
+                            end
+                        end
+                    end
+                end
+
+                task.wait(0.1)
+            end
+        end)
+    end
+})
+
+--------------------------------------------------
+-- AUTO BUY EGG
+--------------------------------------------------
+local AutoBuyEgg = false
+local SelectedEggs = {}
+
+MainTab:Dropdown({
+    Title = "Select Eggs",
+    Multi = true,
+    AllowNone = true,
+
+    Values = {
+        "Fruit",
+        "IceCream",
+        "Alien",
+        "Dino",
+        "Foodie",
+        "Robot",
+    },
+
+    Value = {"Robot"},
+
+    Callback = function(Value)
+        SelectedEggs = Value or {}
+    end
+})
+
+MainTab:Toggle({
+    Title = "Auto Buy Egg",
+    Default = false,
+    Callback = function(Value)
+
+        AutoBuyEgg = Value
+
+        if not Value then
+            return
+        end
+
+        task.spawn(function()
+
+            local HatchRemote = game:GetService("ReplicatedStorage")
+                :WaitForChild("Remotes")
+                :WaitForChild("HatchEgg")
+
+            local PlayerGui = game:GetService("Players")
+                .LocalPlayer
+                :WaitForChild("PlayerGui")
+
+            while AutoBuyEgg do
+
+                for _, EggName in ipairs(SelectedEggs) do
+
+                    pcall(function()
+
+                        local EggFrame = PlayerGui
+                            .EggShopGui
+                            .Frame
+                            .Holder
+                            .ScrollingFrame
+                            :FindFirstChild("Egg_" .. EggName)
+
+                        if not EggFrame then
+                            return
+                        end
+
+                        local StockLabel =
+                            EggFrame:FindFirstChild("StockLabel")
+
+                        if not StockLabel then
+                            return
+                        end
+
+                        local Stock =
+                            tonumber(
+                                StockLabel.Text:match(
+                                    "Remaining:%s*(%d+)"
+                                )
+                            ) or 0
+
+                        if Stock > 0 then
+
+                            HatchRemote:InvokeServer(
+                                EggName,
+                                9999
+                            )
+
+                            print(
+                                "[AUTO BUY]",
+                                EggName,
+                                "| Remaining:",
+                                Stock
+                            )
+                        end
+
+                    end)
+
+                    task.wait(0.1)
+                end
+
+                task.wait(1)
             end
         end)
     end
