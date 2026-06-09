@@ -1252,7 +1252,7 @@ MainTab:Toggle({
                                 HRP.CFrame = CFrame.new(Pos + Vector3.new(0, 2, 0))
 
                                 -- kecil delay biar server register
-                                task.wait(0.25)
+                                task.wait(0.01)
 
                                 pcall(function()
                                     Prompt.HoldDuration = 0
@@ -1267,13 +1267,13 @@ MainTab:Toggle({
                                     end
                                 end)
 
-                                task.wait(0.05) -- super fast loop
+                                task.wait(0.01) -- super fast loop
                             end
                         end
                     end
                 end
 
-                task.wait(0.1)
+                task.wait()
             end
         end)
     end
