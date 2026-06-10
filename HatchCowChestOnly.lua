@@ -353,7 +353,6 @@ local AutoChestToggle = MainTab:Toggle({
                                 HRP.CFrame = CFrame.new(Pos + Vector3.new(0, 2, 0))
 
                                 -- kecil delay biar server register
-                                task.wait()
 
                                 pcall(function()
                                     Prompt.HoldDuration = 0
@@ -368,7 +367,6 @@ local AutoChestToggle = MainTab:Toggle({
                                     end
                                 end)
 
-                                task.wait() -- super fast loop
                             end
                         end
                     end
