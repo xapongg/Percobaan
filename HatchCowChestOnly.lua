@@ -253,6 +253,9 @@ MainTab:Toggle({
 --------------------------------------------------
 
 local AutoRoll = false
+local Rolling = false
+local LastFinish = 0
+local Cooldown = 180 -- 3 menit
 
 MainTab:Toggle({
     Title = "Auto Roll Admin Egg Boost",
@@ -262,6 +265,7 @@ MainTab:Toggle({
         AutoRoll = Value
 
         if not Value then
+            Rolling = false
             return
         end
 
@@ -287,32 +291,44 @@ MainTab:Toggle({
                         :WaitForChild("Holder")
                         :WaitForChild("TitleLabel")
 
-                    if TitleLabel.Text == "Admin Egg Boost" then
+                    local CurrentEvent = TitleLabel.Text
 
-                        -- 1. Refresh state
-                        GetSpinState:InvokeServer()
+                    if CurrentEvent == "Admin Egg Boost"
+                    and not Rolling
+                    and (tick() - LastFinish >= Cooldown) then
 
-                        task.wait()
+                        Rolling = true
 
-                        -- 2. Roll
-                        SpinRequest:InvokeServer()
+                        print("[AUTO ROLL] Admin Egg Boost detected -> Rolling for 2 minutes")
 
-                        task.wait()
+                        local EndTime = tick() + 120 -- 2 menit
 
-                        -- 3. Claim result
-                        ClaimSpinResult:InvokeServer()
+                        while AutoRoll and tick() < EndTime do
 
-                        print("[AUTO ROLL] Admin Egg Boost detected -> Rolling")
+                            pcall(function()
+
+                                GetSpinState:InvokeServer()
+                                SpinRequest:InvokeServer()
+                                ClaimSpinResult:InvokeServer()
+
+                            end)
+
+                            task.wait()
+                        end
+
+                        LastFinish = tick()
+                        Rolling = false
+
+                        print("[AUTO ROLL] Finished -> Cooldown 3 minutes")
                     end
 
                 end)
 
-                task.wait()
+                task.wait(1)
             end
         end)
     end
 })
-
 
 
 local AutoChest = false
