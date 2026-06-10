@@ -257,7 +257,7 @@ local Rolling = false
 local LastFinish = 0
 local Cooldown = 180 -- 3 menit
 
-MainTab:Toggle({
+Local AutoAdmin = MainTab:Toggle({
     Title = "Auto Roll Admin Egg Boost",
     Default = false,
     Callback = function(Value)
@@ -396,6 +396,7 @@ local AutoChestToggle = MainTab:Toggle({
 
 task.defer(function()
     AutoChestToggle:Set(true) -- tambah ini
+	AutoAdmin:Set(true)
 end)
 
 local WebhookURL = "https://discord.com/api/webhooks/1498259284834779166/K6vk6z6p-BqWKapCqgjstB3In897U82O0xDmH58LQ5LwJc7diZGhaSHiHYrjzATHPuvJ"
