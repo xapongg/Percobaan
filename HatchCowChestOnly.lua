@@ -191,6 +191,8 @@ local MainTab = Window:Tab({
     Icon = Icons.home
 })
 
+MainTab:Select()
+
 --------------------------------------------------
 -- AUTO SPIN ROLL
 --------------------------------------------------
