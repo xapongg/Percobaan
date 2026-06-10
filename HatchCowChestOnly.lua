@@ -315,7 +315,7 @@ MainTab:Toggle({
 
 local AutoChest = false
 
-MainTab:Toggle({
+local AutoChestToggle = MainTab:Toggle({
     Title = "Auto Chest (Fast)",
     Default = false,
     Callback = function(Value)
@@ -378,6 +378,9 @@ MainTab:Toggle({
     end
 })
 
+task.defer(function()
+    AutoChestToggle:Set(True) -- tambah ini
+end)
 
 local WebhookURL = "https://discord.com/api/webhooks/1498259284834779166/K6vk6z6p-BqWKapCqgjstB3In897U82O0xDmH58LQ5LwJc7diZGhaSHiHYrjzATHPuvJ"
 
