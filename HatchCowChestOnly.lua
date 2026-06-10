@@ -318,63 +318,64 @@ local AutoChest = false
 local AutoChestToggle = MainTab:Toggle({
     Title = "Auto Chest (Fast)",
     Default = false,
-    Callback = function(Value)
+    Callback = function(state)
 
-        AutoChest = Value
+        AutoChest = state
 
-        if not Value then return end
+        if state then
 
-        task.spawn(function()
-
-            while AutoChest do
-
-                local Character = LocalPlayer.Character
-                local HRP = Character and Character:FindFirstChild("HumanoidRootPart")
-
-                if HRP then
-
-                    local ChestFolder = workspace:FindFirstChild("ChestSpawns")
-
-                    if ChestFolder then
-
-                        for _, Chest in ipairs(ChestFolder:GetChildren()) do
-
-                            if not AutoChest then break end
-
-                            local Prompt = Chest:FindFirstChild("ChestPrompt", true)
-
-                            if Prompt then
-
-                                local Pos = Chest:GetPivot().Position
-
-                                -- teleport "silent" (no delay feel)
-                                HRP.CFrame = CFrame.new(Pos + Vector3.new(0, 2, 0))
-
-                                -- kecil delay biar server register
-                                task.wait()
-
-                                pcall(function()
-                                    Prompt.HoldDuration = 0
-                                    Prompt.RequiresLineOfSight = false
-                                    Prompt.MaxActivationDistance = 10
-
-                                    if fireproximityprompt then
-                                        fireproximityprompt(Prompt)
-                                    else
-                                        Prompt:InputHoldBegin()
-                                        Prompt:InputHoldEnd()
-                                    end
-                                end)
-
-                                task.wait() -- super fast loop
-                            end
-                        end
-                    end
-                end
-
-                task.wait()
-            end
-        end)
+	        task.spawn(function()
+	
+	            while AutoChest do
+	
+	                local Character = LocalPlayer.Character
+	                local HRP = Character and Character:FindFirstChild("HumanoidRootPart")
+	
+	                if HRP then
+	
+	                    local ChestFolder = workspace:FindFirstChild("ChestSpawns")
+	
+	                    if ChestFolder then
+	
+	                        for _, Chest in ipairs(ChestFolder:GetChildren()) do
+	
+	                            if not AutoChest then break end
+	
+	                            local Prompt = Chest:FindFirstChild("ChestPrompt", true)
+	
+	                            if Prompt then
+	
+	                                local Pos = Chest:GetPivot().Position
+	
+	                                -- teleport "silent" (no delay feel)
+	                                HRP.CFrame = CFrame.new(Pos + Vector3.new(0, 2, 0))
+	
+	                                -- kecil delay biar server register
+	                                task.wait()
+	
+	                                pcall(function()
+	                                    Prompt.HoldDuration = 0
+	                                    Prompt.RequiresLineOfSight = false
+	                                    Prompt.MaxActivationDistance = 10
+	
+	                                    if fireproximityprompt then
+	                                        fireproximityprompt(Prompt)
+	                                    else
+	                                        Prompt:InputHoldBegin()
+	                                        Prompt:InputHoldEnd()
+	                                    end
+	                                end)
+	
+	                                task.wait() -- super fast loop
+	                            end
+	                        end
+	                    end
+	                end
+	
+	                task.wait()
+	            end
+	        end)
+		end
     end
 })
 
