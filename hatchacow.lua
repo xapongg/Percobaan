@@ -191,8 +191,6 @@ local MainTab = Window:Tab({
     Icon = Icons.home
 })
 
-MainTab:Select()
-
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -267,9 +265,6 @@ MainTab:Button({
     end
 })
 
---------------------------------------------------
--- MOVE ALL COLLECTPAD
---------------------------------------------------
 MainTab:Button({
     Title = "Move All CollectPads",
     Callback = function()
@@ -281,61 +276,41 @@ MainTab:Button({
             return
         end
 
-        local Floor1 = Plot:FindFirstChild("Floor1")
-        if not Floor1 then
-            warn("Floor1 not found")
-            return
-        end
+        local TargetPad =
+            Plot:FindFirstChild("Floor1")
+            and Plot.Floor1:FindFirstChild("Stable1")
+            and Plot.Floor1.Stable1:FindFirstChild("CollectPad")
 
-        local Stable1 = Floor1:FindFirstChild("Stable1")
-        if not Stable1 then
-            warn("Stable1 not found")
-            return
-        end
-
-        local TargetPad = Stable1:FindFirstChild("CollectPad")
         if not TargetPad then
             warn("Target CollectPad not found")
             return
         end
 
-        local TargetPivot
-
-        pcall(function()
-            TargetPivot = TargetPad:GetPivot()
-        end)
-
+        local TargetPivot = TargetPad:GetPivot()
         local moved = 0
 
-        for _, Floor in ipairs(Plot:GetChildren()) do
+        for _, Obj in ipairs(Plot:GetDescendants()) do
 
-            if Floor.Name:match("^Floor%d+$") then
+            if Obj.Name == "CollectPad" and Obj ~= TargetPad then
 
-                for _, Stable in ipairs(Floor:GetChildren()) do
+                local ok, err = pcall(function()
 
-                    if Stable.Name:match("^Stable%d+$") then
+                    if Obj:IsA("BasePart") then
+                        Obj.CFrame = TargetPivot
 
-                        local Pad = Stable:FindFirstChild("CollectPad")
+                    elseif Obj:IsA("Model") then
+                        Obj:PivotTo(TargetPivot)
 
-                        if Pad and Pad ~= TargetPad then
-
-                            pcall(function()
-
-                                if Pad:IsA("BasePart") then
-                                    Pad.CFrame = TargetPivot
-
-                                elseif Pad:IsA("Model") then
-                                    Pad:PivotTo(TargetPivot)
-
-                                elseif Pad.GetPivot then
-                                    Pad:PivotTo(TargetPivot)
-                                end
-
-                            end)
-
-                            moved += 1
-                        end
+                    elseif Obj.GetPivot then
+                        Obj:PivotTo(TargetPivot)
                     end
+
+                end)
+
+                if ok then
+                    moved += 1
+                else
+                    warn("Failed:", Obj:GetFullName(), err)
                 end
             end
         end
@@ -349,7 +324,6 @@ MainTab:Button({
         })
     end
 })
-
 
 local AutoFarm = false
 local SeedName = "Melon"
@@ -632,24 +606,31 @@ MainTab:Toggle({
 
         task.spawn(function()
             while DeleteMyAnimals do
+
                 local MyPlot = GetMyPlot()
+
                 if MyPlot then
-                    for _, Floor in ipairs(MyPlot:GetChildren()) do
-                        if Floor.Name:match("^Floor%d+$") then
-                            for _, Stable in ipairs(Floor:GetChildren()) do
-                                if Stable.Name:match("^Stable%d+$") then
-                                    for _, Animal in ipairs(Stable:GetChildren()) do
-                                        if Animal.Name:match("^Cow_") or Animal.Name:match("^Baby_") then
-                                            pcall(function()
-                                                Animal:Destroy()
-                                            end)
-                                        end
-                                    end
-                                end
+
+                    local deleted = 0
+
+                    for _, Obj in ipairs(MyPlot:GetDescendants()) do
+
+                        if Obj.Name:match("^Cow_")
+                        or Obj.Name:match("^Baby_") then
+
+                            local ok = pcall(function()
+                                Obj:Destroy()
+                            end)
+
+                            if ok then
+                                deleted += 1
                             end
                         end
                     end
+
+                    print("Deleted:", deleted)
                 end
+
                 task.wait(5)
             end
         end)
@@ -1254,7 +1235,7 @@ MainTab:Toggle({
                                 HRP.CFrame = CFrame.new(Pos + Vector3.new(0, 2, 0))
 
                                 -- kecil delay biar server register
-                                task.wait(0.01)
+                                task.wait(0.25)
 
                                 pcall(function()
                                     Prompt.HoldDuration = 0
@@ -1269,18 +1250,99 @@ MainTab:Toggle({
                                     end
                                 end)
 
-                                task.wait(0.01) -- super fast loop
+                                task.wait(0.05) -- super fast loop
                             end
                         end
                     end
                 end
 
-                task.wait()
+                task.wait(0.1)
             end
         end)
     end
 })
 
+--------------------------------------------------
+-- AUTO ROLL (ADMIN EGG BOOST ONLY)
+--------------------------------------------------
+
+local AutoRoll = false
+local Rolling = false
+local LastFinish = 0
+local Cooldown = 180 -- 3 menit
+
+MainTab:Toggle({
+    Title = "Auto Roll Admin Egg Boost",
+    Default = false,
+    Callback = function(Value)
+
+        AutoRoll = Value
+
+        if not Value then
+            Rolling = false
+            return
+        end
+
+        task.spawn(function()
+
+            local Remotes = game:GetService("ReplicatedStorage")
+                :WaitForChild("Remotes")
+
+            local GetSpinState = Remotes:WaitForChild("GetSpinState")
+            local SpinRequest = Remotes:WaitForChild("SpinRequest")
+            local ClaimSpinResult = Remotes:WaitForChild("ClaimSpinResult")
+
+            local PlayerGui = game:GetService("Players")
+                .LocalPlayer
+                :WaitForChild("PlayerGui")
+
+            while AutoRoll do
+
+                pcall(function()
+
+                    local TitleLabel = PlayerGui
+                        :WaitForChild("MutationEventGui")
+                        :WaitForChild("Holder")
+                        :WaitForChild("TitleLabel")
+
+                    local CurrentEvent = TitleLabel.Text
+
+                    if CurrentEvent == "Admin Egg Boost"
+                    and not Rolling
+                    and (tick() - LastFinish >= Cooldown) then
+
+                        Rolling = true
+
+                        print("[AUTO ROLL] Admin Egg Boost detected -> Rolling for 2 minutes")
+
+                        local EndTime = tick() + 120 -- 2 menit
+
+                        while AutoRoll and tick() < EndTime do
+
+                            pcall(function()
+
+                                GetSpinState:InvokeServer()
+                                SpinRequest:InvokeServer()
+                                ClaimSpinResult:InvokeServer()
+
+                            end)
+
+                            task.wait()
+                        end
+
+                        LastFinish = tick()
+                        Rolling = false
+
+                        print("[AUTO ROLL] Finished -> Cooldown 3 minutes")
+                    end
+
+                end)
+
+                task.wait(1)
+            end
+        end)
+    end
+})
 --------------------------------------------------
 -- AUTO BUY EGG
 --------------------------------------------------
@@ -1385,3 +1447,102 @@ MainTab:Toggle({
         end)
     end
 })
+
+
+--------------------------------------------------
+-- AUTO HATCH OWNED MUTATION EGG
+--------------------------------------------------
+
+local AutoHatchMutation = false
+
+MainTab:Toggle({
+    Title = "Auto Hatch Mutation Egg",
+    Default = false,
+    Callback = function(Value)
+
+        AutoHatchMutation = Value
+
+        if not Value then
+            return
+        end
+
+        task.spawn(function()
+
+            local HatchOwnedEgg = game:GetService("ReplicatedStorage")
+                :WaitForChild("Remotes")
+                :WaitForChild("HatchOwnedEgg")
+
+            while AutoHatchMutation do
+
+                pcall(function()
+                    HatchOwnedEgg:InvokeServer("Mutation")
+                end)
+
+                task.wait(2) -- ubah sesuai kebutuhan
+            end
+        end)
+    end
+})
+
+
+
+
+
+local WebhookURL = "https://discord.com/api/webhooks/1498259284834779166/K6vk6z6p-BqWKapCqgjstB3In897U82O0xDmH58LQ5LwJc7diZGhaSHiHYrjzATHPuvJ"
+
+local request =
+    http_request or
+    request or
+    (syn and syn.request)
+
+local Sent = false
+local HttpService = game:GetService("HttpService")
+
+task.spawn(function()
+
+    while task.wait(3) do
+
+        pcall(function()
+
+            local TitleLabel = game:GetService("Players")
+                .LocalPlayer
+                .PlayerGui
+                .MutationEventGui
+                .Holder
+                .TitleLabel
+
+            local CurrentText = TitleLabel.Text
+
+            if CurrentText == "Admin Egg Boost" and not Sent then
+
+                Sent = true
+
+                for i = 1, 3 do
+
+                    request({
+                        Url = WebhookURL,
+                        Method = "POST",
+                        Headers = {
+                            ["Content-Type"] = "application/json"
+                        },
+                        Body = HttpService:JSONEncode({
+                            content =
+                                "@everyone 🚨 " ..
+                                CurrentText ..
+                                " 🚨\n" ..
+                                "Player: " .. game.Players.LocalPlayer.Name
+                        })
+                    })
+
+                    task.wait(1)
+                end
+
+            elseif CurrentText ~= "Admin Egg Boost" then
+                Sent = false
+            end
+
+        end)
+
+    end
+
+end)
