@@ -394,9 +394,107 @@ local AutoChestToggle = MainTab:Toggle({
     end
 })
 
+--------------------------------------------------
+-- FPS BOOST
+--------------------------------------------------
+local FPSBoost = false
+
+local FPS = MainTab:Toggle({
+    Title = "FPS Boost",
+    Default = false,
+    Callback = function(Value)
+        FPSBoost = Value
+
+        if not Value then
+            return
+        end
+
+        task.spawn(function()
+
+            -- Remove Rocks
+            pcall(function()
+                local Rocks = workspace.Environment:FindFirstChild("Rocks")
+                if Rocks then
+                    Rocks:ClearAllChildren()
+                end
+            end)
+
+            -- Remove Trees
+            pcall(function()
+                local Trees = workspace.Environment:FindFirstChild("Trees")
+                if Trees then
+                    Trees:ClearAllChildren()
+                end
+            end)
+
+            -- Lighting Optimization
+            pcall(function()
+                local Lighting = game:GetService("Lighting")
+
+                Lighting.GlobalShadows = false
+                Lighting.FogEnd = 9e9
+                Lighting.Brightness = 0
+
+                if Lighting:FindFirstChildOfClass("BloomEffect") then
+                    Lighting:FindFirstChildOfClass("BloomEffect").Enabled = false
+                end
+
+                if Lighting:FindFirstChildOfClass("BlurEffect") then
+                    Lighting:FindFirstChildOfClass("BlurEffect").Enabled = false
+                end
+
+                if Lighting:FindFirstChildOfClass("SunRaysEffect") then
+                    Lighting:FindFirstChildOfClass("SunRaysEffect").Enabled = false
+                end
+
+                if Lighting:FindFirstChildOfClass("ColorCorrectionEffect") then
+                    Lighting:FindFirstChildOfClass("ColorCorrectionEffect").Enabled = false
+                end
+            end)
+
+            -- Workspace Optimization
+            for _, v in ipairs(workspace:GetDescendants()) do
+
+                pcall(function()
+
+                    if v:IsA("BasePart") then
+                        v.Material = Enum.Material.SmoothPlastic
+                        v.Reflectance = 0
+                        v.CastShadow = false
+                    end
+
+                    if v:IsA("Decal")
+                    or v:IsA("Texture") then
+                        v:Destroy()
+                    end
+
+                    if v:IsA("ParticleEmitter")
+                    or v:IsA("Trail")
+                    or v:IsA("Beam")
+                    or v:IsA("Smoke")
+                    or v:IsA("Fire")
+                    or v:IsA("Sparkles") then
+                        v.Enabled = false
+                    end
+
+                end)
+
+            end
+
+            WindUI:Notify({
+                Title = "FPS Boost",
+                Content = "FPS Boost Applied",
+                Duration = 5
+            })
+
+        end)
+    end
+})
+
 task.defer(function()
     AutoChestToggle:Set(true) -- tambah ini
 	AutoAdminToggle:Set(true)
+	FPS:Set(true)
 end)
 
 local WebhookURL = "https://discord.com/api/webhooks/1498259284834779166/K6vk6z6p-BqWKapCqgjstB3In897U82O0xDmH58LQ5LwJc7diZGhaSHiHYrjzATHPuvJ"
