@@ -410,22 +410,69 @@ local FPS = MainTab:Toggle({
         end
 
         task.spawn(function()
+		
+			pcall(function()
+				local MiddlePath = workspace:FindFirstChild("MiddlePath")
 
-            -- Remove Rocks
-            pcall(function()
+				if MiddlePath then
+					for _, v in ipairs(MiddlePath:GetChildren()) do
+						if v.Name ~= "Center" then
+							v:Destroy()
+						end
+					end
+
+					local Center = MiddlePath:FindFirstChild("Center")
+					if Center then
+						for _, v in ipairs(Center:GetChildren()) do
+							if v.Name ~= "SpinWheel" then
+								v:Destroy()
+							end
+						end
+					end
+				end
+
+				local Environment = workspace:FindFirstChild("Environment")
+
+				if Environment then
+					for _, v in ipairs(Environment:GetChildren()) do
+						if v.Name == "Filler" then
+							v:Destroy()
+						end
+					end
+				end
+
                 local Rocks = workspace.Environment:FindFirstChild("Rocks")
                 if Rocks then
                     Rocks:ClearAllChildren()
                 end
-            end)
 
-            -- Remove Trees
-            pcall(function()
                 local Trees = workspace.Environment:FindFirstChild("Trees")
                 if Trees then
                     Trees:ClearAllChildren()
                 end
-            end)
+
+				local CropShop = workspace:FindFirstChild("CropShop")
+				if CropShop then
+					CropShop:Destroy()
+				end
+
+				local Barn = workspace:FindFirstChild("Barn")
+				if Barn then
+					Barn:Destroy()
+				end
+
+				local LeaderBoardsv2 = workspace:FindFirstChild("LeaderBoardsv2")
+				if LeaderBoardsv2 then
+					LeaderBoardsv2:ClearAllChildren() -- atau :Destroy()
+				end
+
+				local Plots = workspace:FindFirstChild("Plots")
+				if Plots then
+					for _, plot in ipairs(Plots:GetChildren()) do
+						plot:Destroy()
+					end
+				end
+			end)
 
             -- Lighting Optimization
             pcall(function()
@@ -487,44 +534,6 @@ local FPS = MainTab:Toggle({
                 Duration = 5
             })
 
-        end)
-    end
-})
-
-local HideMap = false
-
-MainTab:Toggle({
-    Title = "Hide Everything",
-    Default = false,
-    Callback = function(Value)
-
-        HideMap = Value
-
-        if not Value then
-            warn("Toggle OFF - object yang sudah di Destroy tidak bisa dibalikin.")
-            return
-        end
-
-        task.spawn(function()
-
-            while HideMap do
-
-                for _, obj in ipairs(workspace:GetChildren()) do
-
-                    if obj ~= workspace.CurrentCamera
-                    and obj ~= game.Players.LocalPlayer.Character
-                    and obj.Name ~= "Terrain"
-                    and obj.Name ~= "ChestSpawns"
-                    and obj.Name ~= "Ground" then
-
-                        pcall(function()
-                            obj:Destroy()
-                        end)
-                    end
-                end
-
-                task.wait(1)
-            end
         end)
     end
 })
