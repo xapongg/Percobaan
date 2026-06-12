@@ -491,6 +491,44 @@ local FPS = MainTab:Toggle({
     end
 })
 
+local HideMap = false
+
+MainTab:Toggle({
+    Title = "Hide Everything",
+    Default = false,
+    Callback = function(Value)
+
+        HideMap = Value
+
+        if not Value then
+            warn("Toggle OFF - object yang sudah di Destroy tidak bisa dibalikin.")
+            return
+        end
+
+        task.spawn(function()
+
+            while HideMap do
+
+                for _, obj in ipairs(workspace:GetChildren()) do
+
+                    if obj ~= workspace.CurrentCamera
+                    and obj ~= game.Players.LocalPlayer.Character
+                    and obj.Name ~= "Terrain"
+                    and obj.Name ~= "ChestSpawns"
+                    and obj.Name ~= "Ground" then
+
+                        pcall(function()
+                            obj:Destroy()
+                        end)
+                    end
+                end
+
+                task.wait(1)
+            end
+        end)
+    end
+})
+
 task.defer(function()
     AutoChestToggle:Set(false) -- tambah ini
 	AutoAdminToggle:Set(true)
