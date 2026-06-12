@@ -492,7 +492,7 @@ local FPS = MainTab:Toggle({
 })
 
 task.defer(function()
-    AutoChestToggle:Set(true) -- tambah ini
+    AutoChestToggle:Set(false) -- tambah ini
 	AutoAdminToggle:Set(true)
 	FPS:Set(true)
 end)
