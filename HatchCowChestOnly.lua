@@ -193,60 +193,6 @@ local MainTab = Window:Tab({
 
 MainTab:Select()
 
---------------------------------------------------
--- AUTO SPIN ROLL
---------------------------------------------------
-
-local AutoSpinRoll = false
-
-MainTab:Toggle({
-    Title = "Auto Spin Roll",
-    Default = false,
-    Callback = function(Value)
-
-        AutoSpinRoll = Value
-
-        if not Value then
-            return
-        end
-
-        task.spawn(function()
-
-            local Remotes = game:GetService("ReplicatedStorage")
-                :WaitForChild("Remotes")
-
-            local GetSpinState = Remotes:WaitForChild("GetSpinState")
-            local SpinRequest = Remotes:WaitForChild("SpinRequest")
-            local ClaimSpinResult = Remotes:WaitForChild("ClaimSpinResult")
-
-            while AutoSpinRoll do
-
-                pcall(function()
-
-                    -- 1. Refresh state
-                    GetSpinState:InvokeServer()
-
-                    task.wait()
-
-                    -- 2. Roll
-                    SpinRequest:InvokeServer()
-
-                    task.wait()
-
-                    -- 3. Claim result
-                    ClaimSpinResult:InvokeServer()
-
-                end)
-
-                task.wait()
-            end
-
-        end)
-    end
-})
-
-
-
 
 --------------------------------------------------
 -- AUTO ROLL (ADMIN EGG BOOST ONLY)
@@ -539,7 +485,7 @@ local FPS = MainTab:Toggle({
 })
 
 task.defer(function()
-    AutoChestToggle:Set(false) -- tambah ini
+    AutoChestToggle:Set(true) -- tambah ini
 	AutoAdminToggle:Set(true)
 	FPS:Set(true)
 end)
