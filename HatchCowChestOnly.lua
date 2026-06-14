@@ -290,55 +290,60 @@ local AutoChestToggle = MainTab:Toggle({
 
         task.spawn(function()
 
-            while AutoChest do
+			while AutoChest do
 
-                local Character = LocalPlayer.Character
-                local HRP = Character and Character:FindFirstChild("HumanoidRootPart")
+				-- Pause AutoChest saat sedang roll
+				if Rolling then
+					task.wait(1)
+					continue
+				end
 
-                if HRP then
+				local Character = LocalPlayer.Character
+				local HRP = Character and Character:FindFirstChild("HumanoidRootPart")
 
-                    local ChestFolder = workspace:FindFirstChild("ChestSpawns")
+				if HRP then
+					local ChestFolder = workspace:FindFirstChild("ChestSpawns")
 
-                    if ChestFolder then
+					if ChestFolder then
+						for _, Chest in ipairs(ChestFolder:GetChildren()) do
 
-                        for _, Chest in ipairs(ChestFolder:GetChildren()) do
+							if not AutoChest then break end
 
-                            if not AutoChest then break end
+							-- Kalau tiba-tiba mulai rolling di tengah jalan
+							if Rolling then
+								break
+							end
 
-                            local Prompt = Chest:FindFirstChild("ChestPrompt", true)
+							local Prompt = Chest:FindFirstChild("ChestPrompt", true)
 
-                            if Prompt then
+							if Prompt then
+								local Pos = Chest:GetPivot().Position
 
-                                local Pos = Chest:GetPivot().Position
+								HRP.CFrame = CFrame.new(Pos + Vector3.new(0, 2, 0))
 
-                                -- teleport "silent" (no delay feel)
-                                HRP.CFrame = CFrame.new(Pos + Vector3.new(0, 2, 0))
+								pcall(function()
+									Prompt.HoldDuration = 0
+									Prompt.RequiresLineOfSight = false
+									Prompt.MaxActivationDistance = 10
 
-                                -- kecil delay biar server register
+									if fireproximityprompt then
+										fireproximityprompt(Prompt)
+									else
+										Prompt:InputHoldBegin()
+										Prompt:InputHoldEnd()
+									end
+								end)
+							end
+						end
+					end
+				end
 
-                                pcall(function()
-                                    Prompt.HoldDuration = 0
-                                    Prompt.RequiresLineOfSight = false
-                                    Prompt.MaxActivationDistance = 10
-
-                                    if fireproximityprompt then
-                                        fireproximityprompt(Prompt)
-                                    else
-                                        Prompt:InputHoldBegin()
-                                        Prompt:InputHoldEnd()
-                                    end
-                                end)
-
-                            end
-                        end
-                    end
-                end
-
-                task.wait()
-            end
+				task.wait()
+			end
         end)
     end
 })
+
 
 --------------------------------------------------
 -- FPS BOOST
