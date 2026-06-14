@@ -487,7 +487,7 @@ local FPS = MainTab:Toggle({
 task.defer(function()
     AutoChestToggle:Set(true) -- tambah ini
 	AutoAdminToggle:Set(true)
-	FPS:Set(false)
+	FPS:Set(true)
 end)
 
 local WebhookURL = "https://discord.com/api/webhooks/1498259284834779166/K6vk6z6p-BqWKapCqgjstB3In897U82O0xDmH58LQ5LwJc7diZGhaSHiHYrjzATHPuvJ"
