@@ -278,6 +278,28 @@ local AutoAdminToggle = MainTab:Toggle({
 
 
 local AutoChest = false
+local CurrentCapybara = nil
+
+-- Detect Capybara spawn/despawn
+workspace.ChildAdded:Connect(function(obj)
+    if obj.Name == "Capybara" and obj:IsA("Model") then
+        CurrentCapybara = obj
+        print("[CAPYBARA] Spawn detected")
+    end
+end)
+
+workspace.ChildRemoved:Connect(function(obj)
+    if obj == CurrentCapybara then
+        CurrentCapybara = nil
+        print("[CAPYBARA] Removed")
+    end
+end)
+
+-- Kalau pas script start Capybara sudah ada
+local ExistingCapybara = workspace:FindFirstChild("Capybara")
+if ExistingCapybara and ExistingCapybara:IsA("Model") then
+    CurrentCapybara = ExistingCapybara
+end
 
 local AutoChestToggle = MainTab:Toggle({
     Title = "Auto Chest (Fast)",
@@ -286,63 +308,123 @@ local AutoChestToggle = MainTab:Toggle({
 
         AutoChest = Value
 
-        if not Value then return end
+        if not Value then
+            return
+        end
 
         task.spawn(function()
 
-			while AutoChest do
+            while AutoChest do
 
-				-- Pause AutoChest saat sedang roll
-				if Rolling then
-					task.wait(1)
-					continue
-				end
+                if Rolling then
+                    task.wait(1)
+                    continue
+                end
 
-				local Character = LocalPlayer.Character
-				local HRP = Character and Character:FindFirstChild("HumanoidRootPart")
+                local Character = LocalPlayer.Character
+                local HRP = Character and Character:FindFirstChild("HumanoidRootPart")
 
-				if HRP then
-					local ChestFolder = workspace:FindFirstChild("ChestSpawns")
+                if HRP then
 
-					if ChestFolder then
-						for _, Chest in ipairs(ChestFolder:GetChildren()) do
+                    --------------------------------------------------
+                    -- PRIORITAS CAPYBARA
+                    --------------------------------------------------
+                    if CurrentCapybara and CurrentCapybara.Parent then
 
-							if not AutoChest then break end
+                        local Prompt = CurrentCapybara:FindFirstChildWhichIsA(
+                            "ProximityPrompt",
+                            true
+                        )
 
-							-- Kalau tiba-tiba mulai rolling di tengah jalan
-							if Rolling then
-								break
-							end
+                        if Prompt then
 
-							local Prompt = Chest:FindFirstChild("ChestPrompt", true)
+                            local Pos = CurrentCapybara:GetPivot().Position
 
-							if Prompt then
-								local Pos = Chest:GetPivot().Position
+                            HRP.CFrame = CFrame.new(Pos + Vector3.new(0,2,0))
 
-								HRP.CFrame = CFrame.new(Pos + Vector3.new(0, 2, 0))
+                            task.wait(0.15)
 
-								pcall(function()
-									Prompt.HoldDuration = 0
-									Prompt.RequiresLineOfSight = false
-									Prompt.MaxActivationDistance = 10
+                            pcall(function()
 
-									if fireproximityprompt then
-										fireproximityprompt(Prompt)
-									else
-										Prompt:InputHoldBegin()
-										Prompt:InputHoldEnd()
-									end
-								end)
-							end
-						end
-					end
-				end
+                                Prompt.HoldDuration = 0
+                                Prompt.RequiresLineOfSight = false
+                                Prompt.MaxActivationDistance = 20
 
-				task.wait()
-			end
+                                if fireproximityprompt then
+                                    fireproximityprompt(Prompt)
+                                else
+                                    Prompt:InputHoldBegin()
+                                    Prompt:InputHoldEnd()
+                                end
+
+                            end)
+
+                            task.wait(0.5)
+                        end
+
+                        continue
+                    end
+
+                    --------------------------------------------------
+                    -- AUTO CHEST
+                    --------------------------------------------------
+                    local ChestFolder = workspace:FindFirstChild("ChestSpawns")
+
+                    if ChestFolder then
+
+                        for _, Chest in ipairs(ChestFolder:GetChildren()) do
+
+                            if not AutoChest then
+                                break
+                            end
+
+                            if Rolling then
+                                break
+                            end
+
+                            -- Kalau Capybara muncul saat lagi chest
+                            if CurrentCapybara then
+                                break
+                            end
+
+                            local Prompt = Chest:FindFirstChild(
+                                "ChestPrompt",
+                                true
+                            )
+
+                            if Prompt then
+
+                                local Pos = Chest:GetPivot().Position
+
+                                HRP.CFrame = CFrame.new(
+                                    Pos + Vector3.new(0,2,0)
+                                )
+
+                                pcall(function()
+
+                                    Prompt.HoldDuration = 0
+                                    Prompt.RequiresLineOfSight = false
+                                    Prompt.MaxActivationDistance = 10
+
+                                    if fireproximityprompt then
+                                        fireproximityprompt(Prompt)
+                                    else
+                                        Prompt:InputHoldBegin()
+                                        Prompt:InputHoldEnd()
+                                    end
+
+                                end)
+                            end
+                        end
+                    end
+                end
+
+                task.wait()
+            end
         end)
     end
 })
+
 
 
 --------------------------------------------------
