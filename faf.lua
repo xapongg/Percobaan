@@ -452,7 +452,7 @@ local AutoSellToggle = MainTab:Toggle({
                         SellRemote:FireServer()
                     end)
 
-                    task.wait(1) -- 1 detik
+                    task.wait(30) -- 1 detik
                 end
             end)
         end
