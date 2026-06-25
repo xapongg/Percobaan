@@ -406,41 +406,7 @@ end
 
 
 
---------------------------------------------------
---// AUTO FEED EVENT (FAST LOOP)
---------------------------------------------------
-local AutoFeedEvent = false
 
-local FeedRemote = game:GetService("ReplicatedStorage")
-    :WaitForChild("rbxts_include")
-    :WaitForChild("node_modules")
-    :WaitForChild("@rbxts")
-    :WaitForChild("remo")
-    :WaitForChild("src")
-    :WaitForChild("container")
-    :WaitForChild("superhero.feedSuperheroAll")
-    -- :WaitForChild("moon.feedAstronautAll")
-
-local AutoFeedToggle = MainTab:Toggle({
-    Title = "Auto Feed Event",
-    Default = false,
-    Callback = function(state)
-        AutoFeedEvent = state
-
-        if state then
-			task.spawn(function()
-				while AutoFeedEvent do
-					for i = 1, 3 do -- spam 3x per tick
-						pcall(function()
-							FeedRemote:FireServer()
-						end)
-					end
-					task.wait() -- fastest safe
-				end
-			end)
-        end
-    end
-})
 
 --------------------------------------------------
 --// SELL ALL (FIXED)
@@ -740,6 +706,42 @@ MainTab:Toggle({
     end
 })
 
+--------------------------------------------------
+--// AUTO SUBMIT SUSHI
+--------------------------------------------------
+local AutoSubmitTotem = false
+
+local TotemRemote = game:GetService("ReplicatedStorage")
+    :WaitForChild("rbxts_include")
+    :WaitForChild("node_modules")
+    :WaitForChild("@rbxts")
+    :WaitForChild("remo")
+    :WaitForChild("src")
+    :WaitForChild("container")
+    :WaitForChild("tiki.submitToTotem")
+
+local AutoTotemToggle = MainTab:Toggle({
+    Title = "Auto Submit Totem",
+    Default = false,
+    Callback = function(state)
+        AutoSubmitTotem = state
+
+        if state then
+            task.spawn(function()
+                while AutoSubmitTotem do
+
+                    for i = 1, 3 do
+                        pcall(function()
+                            TotemRemote:FireServer(i)
+                        end)
+                    end
+
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end
+})
 
 
 --------------------------------------------------
@@ -899,6 +901,7 @@ local BaitList = {
 	"Maja",
 	"Bloop",
 	"OceanEater",
+	"Serpent",
 }
 
 ShopTab:Dropdown({
@@ -1310,8 +1313,8 @@ MiscTab:Toggle({
 
 
 task.defer(function()
-    AutoFeedToggle:Set(false) -- tambah ini
     AutoBuyToggle:Set(true)
+	AutoTotemToggle:Set(true)
     AutoBuyEggToggle:Set(true)
     AutoBuyBaitToggle:Set(true)
     AutoBuyMerchantToggle:Set(true)
