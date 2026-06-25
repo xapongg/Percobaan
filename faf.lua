@@ -884,6 +884,7 @@ local SelectedBaits = {}
 
 local BaitList = {
     "All",
+    "Starter",
     "Koi",
     "River",
     "Puffer",
