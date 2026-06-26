@@ -1330,7 +1330,7 @@ task.spawn(function()
     local Players = game:GetService("Players")
     local HttpService = game:GetService("HttpService")
 
-    local WEBHOOK_URL = "https://discord.com/api/webhooks/1498259284834779166/K6vk6z6p-BqWKapCqgjstB3In897U82O0xDmH58LQ5LwJc7diZGhaSHiHYrjzATHPuvJ"
+    local WEBHOOK_URL = "wehbool"
     local ROLE_ID = "1412768888634216478"
 
     local PlayerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
