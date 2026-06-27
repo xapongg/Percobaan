@@ -185,6 +185,229 @@ Window:OnDestroy(function()
     end
 end)
 
+local CowIcons = require(game:GetService("ReplicatedStorage")
+    :WaitForChild("Modules")
+    :WaitForChild("CowIcons")
+)
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local Inventory = LocalPlayer.PlayerGui
+    :WaitForChild("BackpackGui")
+    :WaitForChild("Backpack")
+    :WaitForChild("Inventory")
+    :WaitForChild("list")
+
+--------------------------------------------------
+-- CACHE (biar lebih cepat dari looping pairs tiap render)
+--------------------------------------------------
+local ImageToName = {}
+
+for name, id in pairs(CowIcons) do
+    ImageToName[id] = name
+end
+
+--------------------------------------------------
+-- BLACKLIST (hapus fake item kayak Bob)
+--------------------------------------------------
+local Blacklist = {
+    Bob = true
+}
+
+--------------------------------------------------
+-- UI
+--------------------------------------------------
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "InventoryViewer"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.Enabled = false
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 340, 0, 430)
+Frame.Position = UDim2.new(0, 20, 0.5, -215)
+Frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+Frame.Parent = ScreenGui
+
+Instance.new("UICorner", Frame)
+
+local UIS = game:GetService("UserInputService")
+
+local dragging = false
+local dragStart
+local startPos
+
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, 0, 0, 32)
+Header.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Header.Parent = Frame
+
+Instance.new("UICorner", Header)
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 1, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Inventory Viewer"
+Title.TextColor3 = Color3.fromRGB(255,255,255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 15
+Title.Parent = Header
+
+local Scroll = Instance.new("ScrollingFrame")
+Scroll.Size = UDim2.new(1, -20, 1, -40)
+Scroll.Position = UDim2.new(0, 10, 0, 35)
+Scroll.BackgroundTransparency = 1
+Scroll.ScrollBarThickness = 6
+Scroll.CanvasSize = UDim2.new(0,0,0,0)
+Scroll.Parent = Frame
+
+local Layout = Instance.new("UIListLayout", Scroll)
+Layout.Padding = UDim.new(0, 4)
+
+
+local function update(input)
+    local delta = input.Position - dragStart
+
+    Frame.Position = UDim2.new(
+        startPos.X.Scale,
+        startPos.X.Offset + delta.X,
+        startPos.Y.Scale,
+        startPos.Y.Offset + delta.Y
+    )
+end
+
+Header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = Frame.Position
+    end
+end)
+
+Header.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        update(input)
+    end
+end)
+--------------------------------------------------
+-- DATA COLLECT
+--------------------------------------------------
+local function getData()
+
+    local data = {}
+    local total = 0
+
+    for _, cow in ipairs(Inventory:GetChildren()) do
+
+        local img = cow:FindFirstChild("CowImage")
+
+        if img then
+            local name = ImageToName[img.Image]
+
+            if name and not Blacklist[name] then
+
+                data[name] = data[name] or {Normal = 0, Baby = 0}
+
+                local scale = img.Size.X.Scale
+
+                if math.abs(scale - 0.7) < 0.01 then
+                    data[name].Baby += 1
+                else
+                    data[name].Normal += 1
+                end
+
+                total += 1
+            end
+        end
+    end
+
+    return data, total
+end
+
+--------------------------------------------------
+-- RENDER
+--------------------------------------------------
+local function render()
+
+    for _, v in ipairs(Scroll:GetChildren()) do
+        if v:IsA("TextLabel") then
+            v:Destroy()
+        end
+    end
+
+    local data, total = getData()
+
+    -- header total
+    local totalLabel = Instance.new("TextLabel")
+    totalLabel.Size = UDim2.new(1, -10, 0, 25)
+    totalLabel.BackgroundTransparency = 1
+    totalLabel.TextXAlignment = Enum.TextXAlignment.Left
+    totalLabel.TextColor3 = Color3.fromRGB(255, 200, 80)
+    totalLabel.Font = Enum.Font.GothamBold
+    totalLabel.TextSize = 14
+    totalLabel.Text = "Total Cows: " .. total
+    totalLabel.Parent = Scroll
+
+    -- sorting biar rapi (terbanyak di atas)
+    local sorted = {}
+
+    for name, v in pairs(data) do
+        table.insert(sorted, {
+            name = name,
+            total = v.Normal + v.Baby,
+            Normal = v.Normal,
+            Baby = v.Baby
+        })
+    end
+
+    table.sort(sorted, function(a,b)
+        return a.total > b.total
+    end)
+
+    for _, v in ipairs(sorted) do
+
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(1, -10, 0, 24)
+        label.BackgroundTransparency = 1
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.TextColor3 = Color3.fromRGB(235,235,235)
+        label.Font = Enum.Font.Gotham
+        label.TextSize = 14
+
+        label.Text = string.format(
+            "▸ %s | N:%d B:%d",
+            v.name,
+            v.Normal,
+            v.Baby
+        )
+
+        label.Parent = Scroll
+    end
+
+    task.wait()
+    Scroll.CanvasSize = UDim2.new(0,0,0,Layout.AbsoluteContentSize.Y)
+end
+
+--------------------------------------------------
+-- LOOP UPDATE (lebih ringan + no spam render)
+--------------------------------------------------
+task.spawn(function()
+    while true do
+        if ScreenGui.Enabled then
+            pcall(render)
+        end
+        task.wait(1)
+    end
+end)
+
+
 --// TAB MAIN
 local MainTab = Window:Tab({
     Title = "Main",
@@ -192,6 +415,14 @@ local MainTab = Window:Tab({
 })
 
 MainTab:Select()
+
+MainTab:Toggle({
+    Title = "Show Inventory",
+    Default = false,
+    Callback = function(value)
+        ScreenGui.Enabled = value
+    end
+})
 
 
 --------------------------------------------------
