@@ -424,7 +424,18 @@ MainTab:Toggle({
     end
 })
 
+MainTab:Button({
+    Title = "Sell All",
+    Callback = function()
+        local SellRequest = game:GetService("ReplicatedStorage")
+            :WaitForChild("Remotes")
+            :WaitForChild("SellRequest")
 
+        pcall(function()
+            SellRequest:FireServer("all")
+        end)
+    end
+})
 --------------------------------------------------
 -- AUTO ROLL (ADMIN EGG BOOST ONLY)
 --------------------------------------------------
