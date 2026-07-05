@@ -191,59 +191,140 @@ local MainTab = Window:Tab({
 
 MainTab:Select()
 
+-- Tambahkan variabel status & memori ini di baris paling atas bagian MainTab
 local AutoTycoon = false
+local AutoTouch = false
+local WasTouchActiveBefore = false -- Variabel memori untuk mengingat status awal Auto Touch
+local TouchToggleInstance = nil    -- Variabel bantuan UI
 
+-- 1. TOGGLE AUTO ALL TYCOON (CLICK DETECTOR)
 MainTab:Toggle({
     Title = "Auto All Tycoon",
     Default = false,
     Callback = function(v)
         AutoTycoon = v
-
         if v then
+            -- SIMPAN STATUS: Ingat apakah sebelum ini Auto Touch lagi nyala
+            WasTouchActiveBefore = AutoTouch
+            
+            -- Jika Auto Touch lagi nyala, matikan sementara secara sistem dan UI
+            if AutoTouch then
+                AutoTouch = false
+                if TouchToggleInstance then
+                    TouchToggleInstance:Set(false)
+                end
+            end
+            
             task.spawn(function()
                 while AutoTycoon do
-
                     for i = 1, 10 do
-                        if not AutoTycoon then
-                            break
-                        end
-
+                        if not AutoTycoon then break end
                         local tycoon = workspace:FindFirstChild("Tycoon"..i)
-
                         if tycoon then
                             for _,obj in ipairs(tycoon:GetDescendants()) do
-                                if not AutoTycoon then
-                                    break
-                                end
-
+                                if not AutoTycoon then break end
                                 if obj:IsA("ClickDetector") then
                                     pcall(function()
                                         local part = obj.Parent
-
                                         if part and part:IsA("BasePart") then
-                                            local hrp = LocalPlayer.Character and
-                                                LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-
-                                            if hrp then
-                                                hrp.CFrame = part.CFrame + Vector3.new(0,3,0)
-                                            end
+                                            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                                            if hrp then hrp.CFrame = part.CFrame + Vector3.new(0,3,0) end
                                         end
-
                                         fireclickdetector(obj)
                                     end)
-
                                     task.wait(0.05)
                                 end
                             end
                         end
                     end
+                    task.wait(0.5)
+                end
+            end)
+        else
+            -- PAS ALL TYCOON MATI: Cek memori, kalau awalnya nyala, hidupkan lagi otomatis
+            if WasTouchActiveBefore then
+                WasTouchActiveBefore = false -- Reset memori
+                if TouchToggleInstance then
+                    TouchToggleInstance:Set(true) -- Ini akan otomatis memicu callback Auto Touch di bawah menjadi true
+                end
+            end
+        end
+    end
+})
 
+-- 2. TOGGLE AUTO TOUCH SMART FILTER (TOUCH INTEREST)
+TouchToggleInstance = MainTab:Toggle({
+    Title = "Auto Touch Smart Filter",
+    Desc = "Hanya memicu tombol yang sudah kebuka (melewati abu-abu)",
+    Default = false,
+    Callback = function(v)
+        -- Proteksi: Jika AutoTycoon lagi aktif, jangan biarkan user menyalakan manual
+        if AutoTycoon and v then
+            if TouchToggleInstance then
+                TouchToggleInstance:Set(false)
+            end
+            WindUI:Notify({
+                Title = "Sistem Dikunci",
+                Content = "Matikan 'Auto All Tycoon' terlebih dahulu!",
+                Duration = 3
+            })
+            return
+        end
+
+        AutoTouch = v
+        if v then
+            task.spawn(function()
+                while AutoTouch do
+                    if AutoTycoon then break end
+
+                    -- Cari tycoon milik player
+                    local myTycoon = nil
+                    for i = 1, 10 do
+                        local tycoon = workspace:FindFirstChild("Tycoon"..i)
+                        if tycoon and tycoon:FindFirstChild("Owner") and (tycoon.Owner.Value == LocalPlayer or tycoon.Owner.Value == LocalPlayer.Name) then
+                            myTycoon = tycoon
+                            break
+                        end
+                    end
+
+                    -- Loop semua Purchases jika tycoon ditemukan
+                    if myTycoon and myTycoon:FindFirstChild("Purchases") then
+                        for _, obj in ipairs(myTycoon.Purchases:GetDescendants()) do
+                            if not AutoTouch or AutoTycoon then break end
+                            
+                            if obj:IsA("TouchTransmitter") then
+                                pcall(function()
+                                    local part = obj.Parent
+                                    local char = LocalPlayer.Character
+                                    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                                    
+                                    if part and part:IsA("BasePart") and hrp then
+                                        -- Filter warna abu-abu (102, 102, 102)
+                                        local grayColor = Color3.fromRGB(102, 102, 102)
+                                        if part.Color == grayColor then
+                                            return
+                                        end
+                                        
+                                        local originalCFrame = hrp.CFrame
+                                        
+                                        firetouchinterest(hrp, part, 0)
+                                        task.wait()
+                                        firetouchinterest(hrp, part, 1)
+                                        
+                                        hrp.CFrame = originalCFrame
+                                    end
+                                end)
+                                task.wait(0.03)
+                            end
+                        end
+                    end
                     task.wait(0.5)
                 end
             end)
         end
     end
 })
+
 
 
 local looping = false
@@ -308,3 +389,5 @@ MainTab:Toggle({
         end
     end
 })
+
+
