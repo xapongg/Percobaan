@@ -543,6 +543,21 @@ if ExistingCapybara and ExistingCapybara:IsA("Model") then
     CurrentCapybara = ExistingCapybara
 end
 
+--------------------------------------------------
+-- AUTO PAUSE AUTO CHEST IF OTHER PLAYER EXISTS
+--------------------------------------------------
+local function IsAlone()
+    local count = 0
+
+    for _, plr in ipairs(game:GetService("Players"):GetPlayers()) do
+        if plr ~= LocalPlayer then
+            count += 1
+        end
+    end
+
+    return count == 0
+end
+
 local AutoChestToggle = MainTab:Toggle({
     Title = "Auto Chest (Fast)",
     Default = false,
@@ -556,14 +571,21 @@ local AutoChestToggle = MainTab:Toggle({
 
         task.spawn(function()
 
-            while AutoChest do
+			while AutoChest do
+			
+			    -- Pause kalau ada player lain
+			    if not IsAlone() then
+			        task.wait(2)
+			        continue
+			    end
+			
+			    if Rolling then
+			        task.wait(1)
+			        continue
+			    end
+			
+			    local Character = LocalPlayer.Character
 
-                if Rolling then
-                    task.wait(1)
-                    continue
-                end
-
-                local Character = LocalPlayer.Character
                 local HRP = Character and Character:FindFirstChild("HumanoidRootPart")
 
                 if HRP then
@@ -816,7 +838,7 @@ local FPS = MainTab:Toggle({
 task.defer(function()
     AutoChestToggle:Set(true) -- tambah ini
 	AutoAdminToggle:Set(true)
-	FPS:Set(false)
+	FPS:Set(true)
 end)
 
 local WebhookURL = "https://discord.com/api/webhooks/1498259284834779166/K6vk6z6p-BqWKapCqgjstB3In897U82O0xDmH58LQ5LwJc7diZGhaSHiHYrjzATHPuvJ"
