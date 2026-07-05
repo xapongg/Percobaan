@@ -546,16 +546,18 @@ end
 --------------------------------------------------
 -- AUTO PAUSE AUTO CHEST IF OTHER PLAYER EXISTS
 --------------------------------------------------
-local function IsAlone()
-    local count = 0
+local IgnoredUserIds = {
+    [8995872060] = true, -- ganti dengan UserId xapongg
+}
 
+local function IsAlone()
     for _, plr in ipairs(game:GetService("Players"):GetPlayers()) do
-        if plr ~= LocalPlayer then
-            count += 1
+        if plr ~= LocalPlayer and not IgnoredUserIds[plr.UserId] then
+            return false
         end
     end
 
-    return count == 0
+    return true
 end
 
 local AutoChestToggle = MainTab:Toggle({
