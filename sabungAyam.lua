@@ -249,9 +249,9 @@ local SelectedFuseTarget = ""
 -- 1. KONFIGURASI WARNA RARITY
 -- Masukkan kode RGB yang bener nanti di sini
 local RarityColors = {
-    ["Common"]    = Color3.fromRGB(255, 255, 255), 
-    ["Uncommon"]  = Color3.fromRGB(0, 255, 0),     
-    ["Rare"]      = Color3.fromRGB(0, 0, 255),     
+    ["Common"]    = Color3.fromRGB(118, 142, 176), 
+    ["Uncommon"]  = Color3.fromRGB(95, 190, 78),     
+    ["Rare"]      = Color3.fromRGB(0, 168, 255),     
     ["Epic"]      = Color3.fromRGB(128, 0, 128),   
     ["Legendary"] = Color3.fromRGB(255, 165, 0)    
 }
