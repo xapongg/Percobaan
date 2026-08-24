@@ -220,9 +220,12 @@ local function isLiveUFOActive()
 end
 
 -- Toggle Switch di Main Tab
+--------------------------------------------------
+--// AUTO SPAM LIVE UFO (STEALTH VERSION)
+--------------------------------------------------
 MainTab:Toggle({
     Title = "Auto Chaos (Live UFO)",
-    Desc = "Spam remote chaos 2 detik sekali saat event Live UFO berlangsung",
+    Desc = "Spam remote chaos dengan delay acak biar ga kena kick",
     Value = false,
     Callback = function(Value)
         AutoSpamUFO = Value
@@ -234,13 +237,18 @@ MainTab:Toggle({
                         pcall(function()
                             ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("SetChickenOrder"):FireServer("chaos")
                         end)
+                        -- Delay acak antara 2.1 sampai 3.5 detik (menghindari deteksi bot)
+                        task.wait(math.random(21, 35) / 10) 
+                    else
+                        -- Kalau UFO ga ada, cek lebih santai biar ga membebani memori
+                        task.wait(1) 
                     end
-                    task.wait(2) -- Delay 2 detik
                 end
             end)
         end
     end
 })
+
 
 --------------------------------------------------
 --// AUTO FUSE CHICKENS (BY NAME & RARITY SPECIFIC)
@@ -300,21 +308,32 @@ local FuseDropdown = MainTab:Dropdown({
     end
 })
 
+
+--------------------------------------------------
+--// SCAN INVENTORY (ANTI LAG-SPIKE & HONEYPOT)
+--------------------------------------------------
 MainTab:Button({
     Title = "Scan Inventory Ayam",
-    Desc = "Klik ini buat mendeteksi ayam & masukin ke dalam dropdown",
+    Desc = "Mendeteksi ayam dengan aman (Anti-Kick)",
     Callback = function()
         local grid = getChickenGrid()
         if not grid then 
-            WindUI:Notify({Title = "Error", Content = "Grid UI belum terload / tidak ditemukan", Duration = 3})
+            WindUI:Notify({Title = "Error", Content = "Grid UI belum terload", Duration = 3})
             return 
         end
 
         local uniqueList = {}
         local foundCombinations = {}
+        local items = grid:GetChildren()
 
-        for _, item in ipairs(grid:GetChildren()) do
-            if item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" then
+        for i, item in ipairs(items) do
+            -- ANTI LAG-SPIKE: Istirahatkan script tiap ngecek 20 ayam
+            if i % 20 == 0 then 
+                task.wait() 
+            end
+
+            -- ANTI-HONEYPOT: Hanya cek item yang Visible (bukan jebakan developer)
+            if item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" and item.Visible then
                 local nameFrame = item:FindFirstChild("name")
                 local faceFrame = item:FindFirstChild("face")
                 
@@ -325,10 +344,8 @@ MainTab:Button({
                         local chickenColor = faceFrame.BackgroundColor3 
                         local chickenRarity = getRarityFromColor(chickenColor)
                         
-                        -- Menggabungkan Nama dan Rarity jadi 1 teks utuh
                         local combination = chickenName .. "-" .. chickenRarity
                         
-                        -- Filter duplikat, supaya di dropdown gak muncul teks yg sama berkali-kali
                         if not foundCombinations[combination] then
                             foundCombinations[combination] = true
                             table.insert(uniqueList, combination)
@@ -338,12 +355,11 @@ MainTab:Button({
             end
         end
 
-        -- Update dropdown dengan hasil scan
         if #uniqueList > 0 then
             FuseDropdown:Refresh(uniqueList)
-            WindUI:Notify({Title = "Scan Berhasil", Content = "Menemukan " .. #uniqueList .. " kombinasi ayam unik.", Duration = 3})
+            WindUI:Notify({Title = "Scan Berhasil", Content = "Dapat " .. #uniqueList .. " kombinasi ayam.", Duration = 3})
         else
-            WindUI:Notify({Title = "Scan Gagal", Content = "Tidak ada ayam yang ditemukan di inventory.", Duration = 3})
+            WindUI:Notify({Title = "Scan Gagal", Content = "Tidak ada ayam yang valid.", Duration = 3})
         end
     end
 })
