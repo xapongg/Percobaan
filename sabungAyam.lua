@@ -16,18 +16,15 @@ local AntiAFK_Enabled = true
 local IdleConn
 
 if AntiAFK_Enabled then
-    -- Method 1: Roblox Idle event
     IdleConn = LocalPlayer.Idled:Connect(function()
         VirtualUser:Button2Down(Vector2.new(0,0), Camera.CFrame)
         task.wait(0.2)
         VirtualUser:Button2Up(Vector2.new(0,0), Camera.CFrame)
     end)
 
-    -- Method 2: Backup key input tiap 60 detik
     task.spawn(function()
         while AntiAFK_Enabled do
-            task.wait(60) -- aman (tidak terlalu cepat, tidak terlalu lama)
-
+            task.wait(60) 
             pcall(function()
                 VIM:SendKeyEvent(true, Enum.KeyCode.Unknown, false, game)
                 task.wait(0.05)
@@ -50,7 +47,6 @@ local WindUI = loadstring(game:HttpGet(
 local Window = WindUI:CreateWindow({
     Title = "XapVerseHub - Nama Game | v0.0.0.1",
     Folder = "NamaGame",
-
     Size = UDim2.fromOffset(580, 460),
     MinSize = Vector2.new(560, 350),
     MaxSize = Vector2.new(850, 560),
@@ -62,19 +58,6 @@ local Window = WindUI:CreateWindow({
     BackgroundImageTransparency = 0.42,
     HideSearchBar = false,
     ScrollBarEnabled = false,
-
-    User = {
-        Enabled = true,
-        Anonymous = false,
-        Callback = function()
-            print("clicked")
-        end,
-    },
-
-    Topbar = {
-        Height = 44,
-        ButtonsType = "Mac", -- Default or Mac
-    },
 })
 
 WindUI:Notify({
@@ -85,7 +68,6 @@ WindUI:Notify({
     CanClose = false,
 })
 
--- Disable default open button
 pcall(function()
     Window:EditOpenButton({ Enabled = false })
 end)
@@ -96,36 +78,29 @@ ScreenGui.Name = "XapVerseHub_Toggle"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
--- Create Icon Button
 local ToggleButton = Instance.new("ImageButton")
 ToggleButton.Parent = ScreenGui
 ToggleButton.Size = UDim2.fromOffset(55, 55)
-
--- Posisi kiri atas (dengan sedikit jarak dari edge)
 ToggleButton.Position = UDim2.new(0, 20, 0, 50)
-
 ToggleButton.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 ToggleButton.BackgroundTransparency = 0
 ToggleButton.Image = "rbxassetid://135878568033396"
 ToggleButton.ImageColor3 = Color3.fromRGB(255,255,255)
 ToggleButton.ZIndex = 999
 
--- Sudut rounded (tidak tajam tapi tidak bulat penuh)
 local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 12) -- 12px rounded
+UICorner.CornerRadius = UDim.new(0, 12)
 UICorner.Parent = ToggleButton
 
--- Optional: Stroke biar clean
 local UIStroke = Instance.new("UIStroke")
 UIStroke.Thickness = 1
 UIStroke.Color = Color3.fromRGB(60, 60, 60)
 UIStroke.Parent = ToggleButton
 
--- Drag Logic (PC + Mobile Support)
 local dragging = false
 local dragInput = nil
 local dragStart = nil
-startPos = nil
+local startPos = nil
 
 local function update(input)
     local delta = input.Position - dragStart
@@ -138,9 +113,7 @@ local function update(input)
 end
 
 ToggleButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-    or input.UserInputType == Enum.UserInputType.Touch then
-        
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
         dragStart = input.Position
         startPos = ToggleButton.Position
@@ -155,8 +128,7 @@ ToggleButton.InputBegan:Connect(function(input)
 end)
 
 ToggleButton.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement
-    or input.UserInputType == Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
         dragInput = input
     end
 end)
@@ -167,12 +139,10 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 
--- Toggle Window (menggunakan method resmi)
 ToggleButton.MouseButton1Click:Connect(function()
-    Window:Toggle() -- pakai method resmi
+    Window:Toggle()
 end)
 
--- Pastikan icon ilang saat window di-destroy
 Window:OnDestroy(function()
     if ScreenGui then
         ScreenGui:Destroy()
@@ -188,41 +158,29 @@ local MainTab = Window:Tab({
 MainTab:Select()
 
 --------------------------------------------------
---// AUTO SPAM LIVE UFO
+--// AUTO SPAM LIVE UFO (STEALTH VERSION)
 --------------------------------------------------
 local AutoSpamUFO = false
 
--- Helper Function untuk cek apakah UI live-ufo sedang aktif
 local function isLiveUFOActive()
     local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
     if not playerGui then return false end
-
     local eventChips = playerGui:FindFirstChild("EventChips")
     if not eventChips then return false end
-
     local frame = eventChips:FindFirstChild("Frame")
     if not frame then return false end
-
     local holder = frame:FindFirstChild("holder")
     if not holder then return false end
-
     local liveUfo = holder:FindFirstChild("live-ufo")
     if not liveUfo then return false end
 
     local timeLabel = liveUfo:FindFirstChild("time")
-    
-    -- Cek jika UI live-ufo ada dan terlihat di screen
     if timeLabel and liveUfo.Visible then
         return true
     end
-
     return false
 end
 
--- Toggle Switch di Main Tab
---------------------------------------------------
---// AUTO SPAM LIVE UFO (STEALTH VERSION)
---------------------------------------------------
 MainTab:Toggle({
     Title = "Auto Chaos (Live UFO)",
     Desc = "Spam remote chaos dengan delay acak biar ga kena kick",
@@ -237,10 +195,8 @@ MainTab:Toggle({
                         pcall(function()
                             ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("SetChickenOrder"):FireServer("chaos")
                         end)
-                        -- Delay acak antara 2.1 sampai 3.5 detik (menghindari deteksi bot)
                         task.wait(math.random(21, 35) / 10) 
                     else
-                        -- Kalau UFO ga ada, cek lebih santai biar ga membebani memori
                         task.wait(1) 
                     end
                 end
@@ -249,15 +205,12 @@ MainTab:Toggle({
     end
 })
 
-
 --------------------------------------------------
 --// AUTO FUSE CHICKENS (BY NAME & RARITY SPECIFIC)
 --------------------------------------------------
 local AutoFuse = false
 local SelectedFuseTarget = ""
 
--- 1. KONFIGURASI WARNA RARITY
--- Masukkan kode RGB yang bener nanti di sini
 local RarityColors = {
     ["Common"]    = Color3.fromRGB(118, 142, 176), 
     ["Uncommon"]  = Color3.fromRGB(95, 190, 78),     
@@ -268,7 +221,6 @@ local RarityColors = {
 
 local function getRarityFromColor(color)
     for rarityName, rarityColor in pairs(RarityColors) do
-        -- Mentoleransi sedikit error pembacaan RGB di Roblox
         local diffR = math.abs(color.R - rarityColor.R)
         local diffG = math.abs(color.G - rarityColor.G)
         local diffB = math.abs(color.B - rarityColor.B)
@@ -283,7 +235,6 @@ end
 local function getChickenGrid()
     local pGui = LocalPlayer:FindFirstChild("PlayerGui")
     if not pGui then return nil end
-    
     local collection = pGui:FindFirstChild("Collection")
     if not collection then return nil end
 
@@ -291,78 +242,70 @@ local function getChickenGrid()
     pcall(function()
         grid = collection.Frame.main.panel.face.content.content.right.panel.face.content.inner.grid
     end)
-    
     return grid
 end
 
--- 2. UI ELEMENTS (DROPDOWN & BUTTON & TOGGLE)
-
--- Dropdown dibuat menjadi variabel agar listnya bisa di-update (refresh) dari button
 local FuseDropdown = MainTab:Dropdown({
     Title = "Pilih Target Fuse",
-    Desc = "Format: Nama-Rarity. Silahkan tekan tombol Refresh dulu.",
-    Values = {"Kosong, silahkan scan dulu"},
-    Value = "Kosong, silahkan scan dulu",
+    Desc = "Ayam akan terscan otomatis setiap 5 detik.",
+    Values = {"Memuat data ayam..."},
+    Value = "Memuat data ayam...",
     Callback = function(Value)
         SelectedFuseTarget = Value
     end
 })
 
-
---------------------------------------------------
---// SCAN INVENTORY (ANTI LAG-SPIKE & HONEYPOT)
---------------------------------------------------
-MainTab:Button({
-    Title = "Scan Inventory Ayam",
-    Desc = "Mendeteksi ayam dengan aman (Anti-Kick)",
-    Callback = function()
+-- BACKGROUND AUTO SCANNER (Tanpa lag & spam UI)
+task.spawn(function()
+    local lastInventoryString = ""
+    
+    while task.wait(5) do -- Scan setiap 5 detik (aman dari spam)
         local grid = getChickenGrid()
-        if not grid then 
-            WindUI:Notify({Title = "Error", Content = "Grid UI belum terload", Duration = 3})
-            return 
-        end
+        if grid then
+            local uniqueList = {}
+            local foundCombinations = {}
+            local items = grid:GetChildren()
 
-        local uniqueList = {}
-        local foundCombinations = {}
-        local items = grid:GetChildren()
+            for i, item in ipairs(items) do
+                -- ANTI LAG-SPIKE: Yield setiap 20 item
+                if i % 20 == 0 then task.wait() end
 
-        for i, item in ipairs(items) do
-            -- ANTI LAG-SPIKE: Istirahatkan script tiap ngecek 20 ayam
-            if i % 20 == 0 then 
-                task.wait() 
-            end
-
-            -- ANTI-HONEYPOT: Hanya cek item yang Visible (bukan jebakan developer)
-            if item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" and item.Visible then
-                local nameFrame = item:FindFirstChild("name")
-                local faceFrame = item:FindFirstChild("face")
-                
-                if nameFrame and faceFrame then
-                    local nameLabel = nameFrame:FindFirstChild("name")
-                    if nameLabel and nameLabel:IsA("TextLabel") then
-                        local chickenName = nameLabel.Text
-                        local chickenColor = faceFrame.BackgroundColor3 
-                        local chickenRarity = getRarityFromColor(chickenColor)
-                        
-                        local combination = chickenName .. "-" .. chickenRarity
-                        
-                        if not foundCombinations[combination] then
-                            foundCombinations[combination] = true
-                            table.insert(uniqueList, combination)
+                if item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" and item.Visible then
+                    local nameFrame = item:FindFirstChild("name")
+                    local faceFrame = item:FindFirstChild("face")
+                    
+                    if nameFrame and faceFrame then
+                        local nameLabel = nameFrame:FindFirstChild("name")
+                        if nameLabel and nameLabel:IsA("TextLabel") then
+                            local chickenName = nameLabel.Text
+                            local chickenColor = faceFrame.BackgroundColor3 
+                            local chickenRarity = getRarityFromColor(chickenColor)
+                            
+                            local combination = chickenName .. "-" .. chickenRarity
+                            
+                            if not foundCombinations[combination] then
+                                foundCombinations[combination] = true
+                                table.insert(uniqueList, combination)
+                            end
                         end
                     end
                 end
             end
-        end
 
-        if #uniqueList > 0 then
-            FuseDropdown:Refresh(uniqueList)
-            WindUI:Notify({Title = "Scan Berhasil", Content = "Dapat " .. #uniqueList .. " kombinasi ayam.", Duration = 3})
-        else
-            WindUI:Notify({Title = "Scan Gagal", Content = "Tidak ada ayam yang valid.", Duration = 3})
+            if #uniqueList > 0 then
+                -- Jadikan string supaya mudah dicompare
+                table.sort(uniqueList) 
+                local currentInventoryString = table.concat(uniqueList, ",")
+                
+                -- HANYA refresh dropdown jika ada ayam baru / perubahan list (biar UI ga spam ngedip)
+                if currentInventoryString ~= lastInventoryString then
+                    lastInventoryString = currentInventoryString
+                    FuseDropdown:Refresh(uniqueList)
+                end
+            end
         end
     end
-})
+end)
 
 MainTab:Toggle({
     Title = "Auto Fuse Target Terpilih",
@@ -374,14 +317,12 @@ MainTab:Toggle({
         if AutoFuse then
             task.spawn(function()
                 while AutoFuse do
-                    -- Cek kalau ada ayam yg valid dipilih
-                    if SelectedFuseTarget ~= "" and SelectedFuseTarget ~= "Kosong, silahkan scan dulu" then
+                    if SelectedFuseTarget ~= "" and SelectedFuseTarget ~= "Memuat data ayam..." then
                         local grid = getChickenGrid()
                         
                         if grid then
                             local targetIds = {}
 
-                            -- Looping ngumpulin semua C-ID ayam yang cocok sama pilihan dropdown
                             for _, item in ipairs(grid:GetChildren()) do
                                 if item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" then
                                     local nameFrame = item:FindFirstChild("name")
@@ -396,7 +337,6 @@ MainTab:Toggle({
                                             
                                             local currentCombo = chickenName .. "-" .. chickenRarity
                                             
-                                            -- Jika string-nya cocok (misal: "Ninja-Rare" == "Ninja-Rare")
                                             if currentCombo == SelectedFuseTarget then
                                                 table.insert(targetIds, item.Name)
                                             end
@@ -405,26 +345,20 @@ MainTab:Toggle({
                                 end
                             end
 
-                            -- Fuse / Execute berpasangan selama ada minimal 2 ayam
                             while #targetIds >= 2 and AutoFuse do
                                 local id1 = table.remove(targetIds, 1)
                                 local id2 = table.remove(targetIds, 1)
 
                                 pcall(function()
-                                    local args = {
-                                        id1,
-                                        id2,
-                                        {},
-                                        [5] = "a"
-                                    }
+                                    local args = { id1, id2, {}, [5] = "a" }
                                     ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("FuseChickens"):InvokeServer(unpack(args))
                                 end)
 
-                                task.wait(0.3) -- Jeda biar remote gak dimakan cooldown gamenya
+                                task.wait(0.3)
                             end
                         end
                     end
-                    task.wait(2) -- Jeda 2 detik sebelum ngulang scan inventory
+                    task.wait(2)
                 end
             end)
         end
