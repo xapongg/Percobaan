@@ -1,4 +1,3 @@
-
 -- loadstring(game:HttpGet("https://raw.githubusercontent.com/xapongg/Percobaan/refs/heads/main/sabungAyam.lua"))()
 
 --// Services
@@ -207,76 +206,76 @@ MainTab:Toggle({
 })
 
 --------------------------------------------------
---// AUTO FUSE CHICKENS (DEX++ SAFE MEMORY SCANNER)
+--// AUTO FUSE CHICKENS (SAFE NON-KICK SCANNER)
 --------------------------------------------------
 local AutoFuse = false
 local SelectedRawName = ""
 
--- DEX++ Safe Instance Collector
-local function getSafeChildren(parent)
-    if not parent then return {} end
-    local children = {}
-    -- Membaca menggunakan FindFirstChildOfClass secara terpisah tanpa memicu listener UI
-    local success, result = pcall(function()
-        return parent:GetChildren()
-    end)
-    if success and result then
-        return result
-    end
-    return children
-end
-
+-- Safe UI Grid Getter (Menggunakan Safe Indexing)
 local function getChickenGrid()
-    local grid = nil
-    pcall(function()
-        grid = LocalPlayer.PlayerGui.Collection.Frame.main.panel.face.content.content.right.panel.face.content.inner.grid
+    local success, result = pcall(function()
+        return LocalPlayer.PlayerGui.Collection.Frame.main.panel.face.content.content.right.panel.face.content.inner.grid
     end)
-    return grid
+    if success and result then return result end
+    return nil
 end
 
 local FuseDropdown = MainTab:Dropdown({
     Title = "Pilih Target Fuse",
-    Desc = "Format: Nama Ayam (Jumlah)",
+    Desc = "Pilih jenis ayam yang ingin digabungkan",
     Values = {"(Klik Scan Dulu)"},
     Value = "(Klik Scan Dulu)",
     Callback = function(Value)
+        -- Ambil teks murni nama ayam tanpa teks jumlah "(x)"
         SelectedRawName = string.gsub(Value, "%s*%(%d+%)", "")
     end
 })
 
---------------------------------------------------
---// METODE 3: SAFE UI-HIDE SCAN
---------------------------------------------------
 MainTab:Button({
-    Title = "Scan Inventory (Mode Stealth)",
+    Title = "Scan Inventory Ayam",
+    Desc = "Scan aman tanpa memicu Kick Anti-Cheat",
     Callback = function()
-        pcall(function()
-            local grid = LocalPlayer.PlayerGui.Collection.Frame.main.panel.face.content.content.right.panel.face.content.inner.grid
-            
-            -- 1. Sembunyikan Grid agar Roblox Rendering Engine & Anti-Cheat tidak membaca activity
-            grid.Visible = false 
+        local grid = getChickenGrid()
+        if not grid then 
+            WindUI:Notify({Title = "Error", Content = "Buka menu Collection/Inventory di game dulu!", Duration = 3})
+            return 
+        end
 
-            local nameCounts = {}
-            local items = grid:GetChildren()
+        local nameCounts = {}
+        local rawChildren = grid:GetChildren()
 
-            for i = 1, #items do
-                local item = items[i]
-                if item.Name:sub(1,1) == "c" then
-                    local nameLabel = item:FindFirstChild("name", true)
+        -- Scan dengan Proteksi Thread (Per-Batch 10 item)
+        for i = 1, #rawChildren do
+            local item = rawChildren[i]
+            if i % 10 == 0 then task.wait() end
+
+            pcall(function()
+                if item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" and item.Visible then
+                    local nameLabel = item.name.name
                     if nameLabel and nameLabel.Text ~= "" then
-                        nameCounts[nameLabel.Text] = (nameCounts[nameLabel.Text] or 0) + 1
+                        local cName = nameLabel.Text
+                        nameCounts[cName] = (nameCounts[cName] or 0) + 1
                     end
                 end
-            end
+            end)
+        end
 
-            -- 2. Munculkan kembali Grid-nya
-            grid.Visible = true 
-            
-            -- 3. Update Dropdown...
-        end)
+        local formattedList = {}
+        for chickenName, count in pairs(nameCounts) do
+            if count >= 2 then
+                table.insert(formattedList, chickenName .. " (" .. count .. ")")
+            end
+        end
+
+        if #formattedList > 0 then
+            table.sort(formattedList)
+            FuseDropdown:Refresh(formattedList)
+            WindUI:Notify({Title = "Scan Sukses", Content = "Berhasil memuat " .. #formattedList .. " jenis ayam.", Duration = 3})
+        else
+            WindUI:Notify({Title = "Scan Selesai", Content = "Tidak ada pasang ayam yang memenuhi syarat (Min 2).", Duration = 3})
+        end
     end
 })
-
 
 MainTab:Toggle({
     Title = "Auto Fuse Target Terpilih",
@@ -293,23 +292,18 @@ MainTab:Toggle({
                         
                         if grid then
                             local targetIds = {}
-                            local rawChildren = getSafeChildren(grid)
 
-                            for i = 1, #rawChildren do
-                                local item = rawChildren[i]
-                                if i % 10 == 0 then task.wait() end
-
+                            for _, item in ipairs(grid:GetChildren()) do
                                 pcall(function()
-                                    if item.Name:sub(1, 1) == "c" then
-                                        local nameLabel = item:FindFirstChild("name", true)
-                                        if nameLabel and nameLabel.Text == SelectedRawName then
+                                    if item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" then
+                                        if item.name.name.Text == SelectedRawName then
                                             table.insert(targetIds, item.Name)
                                         end
                                     end
                                 end)
                             end
 
-                            -- Fuse Pasangan
+                            -- Fuse Pasangan (Dengan Delay Aman Anti-Ban)
                             while #targetIds >= 2 and AutoFuse do
                                 local id1 = table.remove(targetIds, 1)
                                 local id2 = table.remove(targetIds, 1)
@@ -319,11 +313,11 @@ MainTab:Toggle({
                                     ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("FuseChickens"):InvokeServer(unpack(args))
                                 end)
 
-                                task.wait(0.6)
+                                task.wait(0.5) -- Jeda disesuaikan menjadi 0.5s agar server tidak mendeteksi spam remote
                             end
                         end
                     end
-                    task.wait(3.0)
+                    task.wait(2.5)
                 end
             end)
         end
