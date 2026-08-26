@@ -206,74 +206,79 @@ MainTab:Toggle({
 })
 
 --------------------------------------------------
---// AUTO FUSE CHICKENS (SAFE NON-KICK SCANNER)
+--// AUTO FUSE CHICKENS (ZERO-LAG BYPASS SCANNER)
 --------------------------------------------------
 local AutoFuse = false
 local SelectedRawName = ""
 
--- Safe UI Grid Getter (Menggunakan Safe Indexing)
+-- Safe UI Grid Getter (Menggunakan Safe Indexing & Deferred Call)
 local function getChickenGrid()
-    local success, result = pcall(function()
-        return LocalPlayer.PlayerGui.Collection.Frame.main.panel.face.content.content.right.panel.face.content.inner.grid
+    local grid = nil
+    pcall(function()
+        grid = LocalPlayer.PlayerGui.Collection.Frame.main.panel.face.content.content.right.panel.face.content.inner.grid
     end)
-    if success and result then return result end
-    return nil
+    return grid
 end
 
 local FuseDropdown = MainTab:Dropdown({
     Title = "Pilih Target Fuse",
-    Desc = "Pilih jenis ayam yang ingin digabungkan",
+    Desc = "Format: Nama Ayam (Jumlah)",
     Values = {"(Klik Scan Dulu)"},
     Value = "(Klik Scan Dulu)",
     Callback = function(Value)
-        -- Ambil teks murni nama ayam tanpa teks jumlah "(x)"
         SelectedRawName = string.gsub(Value, "%s*%(%d+%)", "")
     end
 })
 
 MainTab:Button({
     Title = "Scan Inventory Ayam",
-    Desc = "Scan aman tanpa memicu Kick Anti-Cheat",
+    Desc = "Scan aman tanpa memicu Kick / Crash",
     Callback = function()
         local grid = getChickenGrid()
         if not grid then 
-            WindUI:Notify({Title = "Error", Content = "Buka menu Collection/Inventory di game dulu!", Duration = 3})
+            WindUI:Notify({Title = "Error", Content = "Buka menu Inventory game dulu!", Duration = 3})
             return 
         end
 
         local nameCounts = {}
         local rawChildren = grid:GetChildren()
 
-        -- Scan dengan Proteksi Thread (Per-Batch 10 item)
-        for i = 1, #rawChildren do
-            local item = rawChildren[i]
-            if i % 10 == 0 then task.wait() end
-
-            pcall(function()
-                if item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" and item.Visible then
-                    local nameLabel = item.name.name
-                    if nameLabel and nameLabel.Text ~= "" then
-                        local cName = nameLabel.Text
-                        nameCounts[cName] = (nameCounts[cName] or 0) + 1
-                    end
+        -- ASYNCHRONOUS SCAN (Mencegah Lag-Spike & Client Crash)
+        task.spawn(function()
+            for i = 1, #rawChildren do
+                local item = rawChildren[i]
+                
+                -- Memberikan napas pada engine Roblox setiap 5 item (Anti-FC & Anti-Kick)
+                if i % 5 == 0 then 
+                    task.wait(0.01) 
                 end
-            end)
-        end
 
-        local formattedList = {}
-        for chickenName, count in pairs(nameCounts) do
-            if count >= 2 then
-                table.insert(formattedList, chickenName .. " (" .. count .. ")")
+                if item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" and item.Visible then
+                    pcall(function()
+                        local nameLabel = item.name.name
+                        if nameLabel and nameLabel.Text ~= "" then
+                            local cName = nameLabel.Text
+                            nameCounts[cName] = (nameCounts[cName] or 0) + 1
+                        end
+                    end)
+                end
             end
-        end
 
-        if #formattedList > 0 then
-            table.sort(formattedList)
-            FuseDropdown:Refresh(formattedList)
-            WindUI:Notify({Title = "Scan Sukses", Content = "Berhasil memuat " .. #formattedList .. " jenis ayam.", Duration = 3})
-        else
-            WindUI:Notify({Title = "Scan Selesai", Content = "Tidak ada pasang ayam yang memenuhi syarat (Min 2).", Duration = 3})
-        end
+            local formattedList = {}
+            for chickenName, count in pairs(nameCounts) do
+                if count >= 2 then
+                    table.insert(formattedList, chickenName .. " (" .. count .. ")")
+                end
+            end
+
+            if #formattedList > 0 then
+                table.sort(formattedList)
+                FuseDropdown:Refresh(formattedList)
+                WindUI:Notify({Title = "Scan Sukses", Content = "Berhasil memuat " .. #formattedList .. " jenis ayam.", Duration = 3})
+            else
+                WindUI:Notify({Title = "Scan Selesai", Content = "Tidak ada pasang ayam yang memenuhi syarat (Min 2).", Duration = 3})
+            end
+        end)
     end
 })
 
@@ -303,7 +308,7 @@ MainTab:Toggle({
                                 end)
                             end
 
-                            -- Fuse Pasangan (Dengan Delay Aman Anti-Ban)
+                            -- Fuse Pasangan (Menggunakan Thread Async & Remote Delay 0.6s)
                             while #targetIds >= 2 and AutoFuse do
                                 local id1 = table.remove(targetIds, 1)
                                 local id2 = table.remove(targetIds, 1)
@@ -313,14 +318,13 @@ MainTab:Toggle({
                                     ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("FuseChickens"):InvokeServer(unpack(args))
                                 end)
 
-                                task.wait(0.5) -- Jeda disesuaikan menjadi 0.5s agar server tidak mendeteksi spam remote
+                                task.wait(0.6) -- Delay dinaikkan ke 0.6s agar aman dari rate-limit anti-cheat
                             end
                         end
                     end
-                    task.wait(2.5)
+                    task.wait(3.0)
                 end
             end)
         end
     end
 })
-
