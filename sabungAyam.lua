@@ -158,6 +158,94 @@ local MainTab = Window:Tab({
 MainTab:Select()
 
 --------------------------------------------------
+--// AUTO TWEEN SCRAP & REBIRTH
+--------------------------------------------------
+local TweenService = game:GetService("TweenService")
+local AutoScrapTween = false
+
+MainTab:Button({
+    Title = "Start Scrap & Rebirth Tween",
+    Desc = "Tween ke semua Loose Scrap, lalu ke Recycler1 + Auto Rebirth",
+    Callback = function()
+        if AutoScrapTween then return end -- Cegah spam klik jika tween sedang berjalan
+        AutoScrapTween = true
+
+        task.spawn(function()
+            local character = LocalPlayer.Character
+            local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+            
+            if not rootPart then
+                WindUI:Notify({Title = "Error", Content = "Karakter tidak ditemukan!", Duration = 3})
+                AutoScrapTween = false
+                return
+            end
+
+            -- Speed Tween (Bisa disesuaikan, semakin besar semakin kencang)
+            local tweenSpeed = 60 
+
+            local function tweenTo(targetCFrame)
+                local distance = (rootPart.Position - targetCFrame.Position).Magnitude
+                local tweenTime = distance / tweenSpeed
+                local tweenInfo = TweenInfo.new(tweenTime, Enum.EasingStyle.Linear)
+                
+                local tween = TweenService:Create(rootPart, tweenInfo, {CFrame = targetCFrame})
+                tween:Play()
+                tween.Completed:Wait()
+            end
+
+            -- 1. Tween ke semua workspace.PitScrap.Loose
+            local pitScrap = workspace:FindFirstChild("PitScrap")
+            if pitScrap then
+                for _, looseItem in ipairs(pitScrap:GetChildren()) do
+                    if looseItem.Name == "Loose" and AutoScrapTween then
+                        local targetPart = looseItem:IsA("BasePart") and looseItem or looseItem:FindFirstChildWhichIsA("BasePart")
+                        if targetPart then
+                            tweenTo(targetPart.CFrame)
+                            task.wait(0.1) -- Jeda sebentar di tiap loose item
+                        end
+                    end
+                end
+            end
+
+            -- 2. Tween ke workspace.Recyclers.Recycler1 + Fire Rebirth 10 studs sebelum sampai
+            local recyclers = workspace:FindFirstChild("Recyclers")
+            local recycler1 = recyclers and recyclers:FindFirstChild("Recycler1")
+            
+            if recycler1 then
+                local targetPart = recycler1:IsA("BasePart") and recycler1 or recycler1:FindFirstChildWhichIsA("BasePart")
+                if targetPart then
+                    local targetPosition = targetPart.Position
+                    local currentPosition = rootPart.Position
+                    
+                    -- Hitung posisi 10 studs sebelum sampai di Recycler1
+                    local direction = (targetPosition - currentPosition).Unit
+                    local distance = (targetPosition - currentPosition).Magnitude
+                    
+                    local stopBeforeDistance = math.max(0, distance - 10)
+                    local positionBeforeRecycler = currentPosition + (direction * stopBeforeDistance)
+                    local cframeBeforeRecycler = CFrame.new(positionBeforeRecycler, targetPosition)
+
+                    -- Tween ke titik 10 studs sebelum Recycler1
+                    tweenTo(cframeBeforeRecycler)
+
+                    -- Fire Remote Rebirth 1x
+                    pcall(function()
+                        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Rebirth"):InvokeServer()
+                    end)
+                    WindUI:Notify({Title = "Rebirth", Content = "Remote Rebirth berhasil di-fire!", Duration = 3})
+
+                    -- Lanjutkan tween sisa 10 studs ke Recycler1
+                    tweenTo(targetPart.CFrame)
+                end
+            end
+
+            AutoScrapTween = false
+        end)
+    end
+})
+
+
+--------------------------------------------------
 --// AUTO CLAIM INCUBATOR (RANDOM 3 - 5 MENIT)
 --------------------------------------------------
 local AutoClaimIncubator = false
