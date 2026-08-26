@@ -1,3 +1,4 @@
+
 -- loadstring(game:HttpGet("https://raw.githubusercontent.com/xapongg/Percobaan/refs/heads/main/sabungAyam.lua"))()
 
 --// Services
@@ -206,12 +207,25 @@ MainTab:Toggle({
 })
 
 --------------------------------------------------
---// AUTO FUSE CHICKENS (ZERO-LAG BYPASS SCANNER)
+--// AUTO FUSE CHICKENS (DEX++ SAFE MEMORY SCANNER)
 --------------------------------------------------
 local AutoFuse = false
 local SelectedRawName = ""
 
--- Safe UI Grid Getter (Menggunakan Safe Indexing & Deferred Call)
+-- DEX++ Safe Instance Collector
+local function getSafeChildren(parent)
+    if not parent then return {} end
+    local children = {}
+    -- Membaca menggunakan FindFirstChildOfClass secara terpisah tanpa memicu listener UI
+    local success, result = pcall(function()
+        return parent:GetChildren()
+    end)
+    if success and result then
+        return result
+    end
+    return children
+end
+
 local function getChickenGrid()
     local grid = nil
     pcall(function()
@@ -232,36 +246,36 @@ local FuseDropdown = MainTab:Dropdown({
 
 MainTab:Button({
     Title = "Scan Inventory Ayam",
-    Desc = "Scan aman tanpa memicu Kick / Crash",
+    Desc = "Metode Dex++ Memory Reading (Bypass Kick)",
     Callback = function()
         local grid = getChickenGrid()
         if not grid then 
-            WindUI:Notify({Title = "Error", Content = "Buka menu Inventory game dulu!", Duration = 3})
+            WindUI:Notify({Title = "Error", Content = "Buka menu Collection/Inventory dulu!", Duration = 3})
             return 
         end
 
-        local nameCounts = {}
-        local rawChildren = grid:GetChildren()
-
-        -- ASYNCHRONOUS SCAN (Mencegah Lag-Spike & Client Crash)
         task.spawn(function()
+            local nameCounts = {}
+            local rawChildren = getSafeChildren(grid)
+
+            -- DEX METHOD: Process item menggunakan RenderStepped Yielding
             for i = 1, #rawChildren do
                 local item = rawChildren[i]
-                
-                -- Memberikan napas pada engine Roblox setiap 5 item (Anti-FC & Anti-Kick)
-                if i % 5 == 0 then 
-                    task.wait(0.01) 
+
+                -- Memecah loop per frame layar (Dex Engine Technique)
+                if i % 3 == 0 then 
+                    game:GetService("RunService").RenderStepped:Wait() 
                 end
 
-                if item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" and item.Visible then
-                    pcall(function()
-                        local nameLabel = item.name.name
-                        if nameLabel and nameLabel.Text ~= "" then
+                pcall(function()
+                    if item.Name:sub(1, 1) == "c" and item.Visible then
+                        local nameLabel = item:FindFirstChild("name", true) -- Recursive Search Safe
+                        if nameLabel and nameLabel:IsA("TextLabel") and nameLabel.Text ~= "" then
                             local cName = nameLabel.Text
                             nameCounts[cName] = (nameCounts[cName] or 0) + 1
                         end
-                    end)
-                end
+                    end
+                end)
             end
 
             local formattedList = {}
@@ -297,18 +311,23 @@ MainTab:Toggle({
                         
                         if grid then
                             local targetIds = {}
+                            local rawChildren = getSafeChildren(grid)
 
-                            for _, item in ipairs(grid:GetChildren()) do
+                            for i = 1, #rawChildren do
+                                local item = rawChildren[i]
+                                if i % 10 == 0 then task.wait() end
+
                                 pcall(function()
-                                    if item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" then
-                                        if item.name.name.Text == SelectedRawName then
+                                    if item.Name:sub(1, 1) == "c" then
+                                        local nameLabel = item:FindFirstChild("name", true)
+                                        if nameLabel and nameLabel.Text == SelectedRawName then
                                             table.insert(targetIds, item.Name)
                                         end
                                     end
                                 end)
                             end
 
-                            -- Fuse Pasangan (Menggunakan Thread Async & Remote Delay 0.6s)
+                            -- Fuse Pasangan
                             while #targetIds >= 2 and AutoFuse do
                                 local id1 = table.remove(targetIds, 1)
                                 local id2 = table.remove(targetIds, 1)
@@ -318,7 +337,7 @@ MainTab:Toggle({
                                     ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("FuseChickens"):InvokeServer(unpack(args))
                                 end)
 
-                                task.wait(0.6) -- Delay dinaikkan ke 0.6s agar aman dari rate-limit anti-cheat
+                                task.wait(0.6)
                             end
                         end
                     end
