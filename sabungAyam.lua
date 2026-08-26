@@ -158,14 +158,14 @@ local MainTab = Window:Tab({
 MainTab:Select()
 
 --------------------------------------------------
---// AUTO TWEEN SCRAP & REBIRTH (REALTIME TIMING)
+--// AUTO TWEEN SCRAP & REBIRTH (PERFECT HEIGHT & SPEED)
 --------------------------------------------------
 local TweenService = game:GetService("TweenService")
 local AutoScrapTween = false
 
 MainTab:Button({
     Title = "Start Scrap & Rebirth Tween",
-    Desc = "Tween lancar tanpa berhenti + Rebirth pas di jalan",
+    Desc = "Tween pas di atas lantai (ga tenggelam) & kecepatan aman",
     Callback = function()
         if AutoScrapTween then return end 
         AutoScrapTween = true
@@ -173,22 +173,28 @@ MainTab:Button({
         task.spawn(function()
             local character = LocalPlayer.Character
             local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+            local humanoid = character and character:FindFirstChildWhichIsA("Humanoid")
             
-            if not rootPart then
+            if not rootPart or not humanoid then
                 WindUI:Notify({Title = "Error", Content = "Karakter tidak ditemukan!", Duration = 3})
                 AutoScrapTween = false
                 return
             end
 
-            -- Kecepatan Tween (Bisa disesuaikan)
-            local tweenSpeed = 50 
+            -- Kecepatan aman anti-kick (disesuaikan agar server tidak memutus koneksi)
+            local tweenSpeed = 28 
 
-            -- Helper Tween: Tetap berdiri tegak & gerakan halus
+            -- Tinggi offset kaki berdiri (HipHeight + setengah ukuran RootPart)
+            local heightOffset = Vector3.new(0, humanoid.HipHeight + (rootPart.Size.Y / 2), 0)
+
+            -- Helper Tween: Mengunci posisi agar tegak & pas di permukaan tanah
             local function tweenTo(targetPosition)
+                -- Tambahkan offset tinggi agar karakter berdiri tepat di atas target
+                local adjustedPos = targetPosition + heightOffset
                 local currentYaw = math.rad(rootPart.Orientation.Y)
-                local uprightCFrame = CFrame.new(targetPosition) * CFrame.Angles(0, currentYaw, 0)
+                local uprightCFrame = CFrame.new(adjustedPos) * CFrame.Angles(0, currentYaw, 0)
 
-                local distance = (rootPart.Position - targetPosition).Magnitude
+                local distance = (rootPart.Position - adjustedPos).Magnitude
                 local tweenTime = distance / tweenSpeed
                 local tweenInfo = TweenInfo.new(tweenTime, Enum.EasingStyle.Linear)
                 
@@ -212,7 +218,7 @@ MainTab:Button({
                 end
             end
 
-            -- 2. Tween ke Recycler1 + Fire Rebirth instan 10 studs sebelum sampai (TANPA STUCK/STOP)
+            -- 2. Tween ke Recycler1 + Fire Rebirth instan 10 studs sebelum sampai
             local recyclers = workspace:FindFirstChild("Recyclers")
             local recycler1 = recyclers and recyclers:FindFirstChild("Recycler1")
             
@@ -231,7 +237,7 @@ MainTab:Button({
                     local tw1 = tweenTo(positionBeforeRecycler)
                     tw1.Completed:Wait()
 
-                    -- Fire Rebirth INSTAN dalam 1 frame (Tanpa task.wait / pause)
+                    -- Fire Rebirth INSTAN tanpa jeda
                     task.spawn(function()
                         pcall(function()
                             ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Rebirth"):InvokeServer()
@@ -239,7 +245,7 @@ MainTab:Button({
                     end)
                     WindUI:Notify({Title = "Rebirth", Content = "Rebirth Fired on Timing!", Duration = 2})
 
-                    -- Phase 2: Langsung sambung tween sisa 10 studs ke Recycler1 tanpa patah
+                    -- Phase 2: Langsung sambung ke target Recycler1
                     local tw2 = tweenTo(targetPos)
                     tw2.Completed:Wait()
                 end
