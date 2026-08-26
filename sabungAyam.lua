@@ -158,6 +158,69 @@ local MainTab = Window:Tab({
 MainTab:Select()
 
 --------------------------------------------------
+--// AUTO CLAIM INCUBATOR (RANDOM 3 - 5 MENIT)
+--------------------------------------------------
+local AutoClaimIncubator = false
+
+MainTab:Toggle({
+    Title = "Auto Claim Incubator",
+    Desc = "Otomatis claim incubator secara acak tiap 3-5 menit",
+    Value = false,
+    Callback = function(Value)
+        AutoClaimIncubator = Value
+
+        if AutoClaimIncubator then
+            task.spawn(function()
+                while AutoClaimIncubator do
+                    pcall(function()
+                        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("IncubatorClaim"):InvokeServer()
+                    end)
+
+                    -- Delay acak antara 180 detik (3 menit) sampai 300 detik (5 menit)
+                    local randomDelay = math.random(180, 300)
+                    task.wait(randomDelay)
+                end
+            end)
+        end
+    end
+})
+
+--------------------------------------------------
+--// AUTO TOUCH NEST EGG (RANDOM 1 - 2 MENIT)
+--------------------------------------------------
+local AutoTouchEgg = false
+
+MainTab:Toggle({
+    Title = "Auto Touch Nest Egg",
+    Desc = "Otomatis touch NestEgg secara acak tiap 1-2 menit",
+    Value = false,
+    Callback = function(Value)
+        AutoTouchEgg = Value
+
+        if AutoTouchEgg then
+            task.spawn(function()
+                while AutoTouchEgg do
+                    pcall(function()
+                        local nestEgg = workspace:FindFirstChild("NestEggs") and workspace.NestEggs:FindFirstChild("NestEgg")
+                        local character = LocalPlayer.Character
+                        local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+
+                        if nestEgg and rootPart then
+                            firetouchinterest(rootPart, nestEgg, 0)
+                            task.wait(0.1)
+                            firetouchinterest(rootPart, nestEgg, 1)
+                        end
+                    end)
+
+                    local randomDelay = math.random(60, 120)
+                    task.wait(randomDelay)
+                end
+            end)
+        end
+    end
+})
+
+--------------------------------------------------
 --// AUTO SPAM LIVE UFO (STEALTH + AUTO RESET COOP)
 --------------------------------------------------
 local AutoSpamUFO = false
@@ -200,7 +263,6 @@ MainTab:Toggle({
                         end)
                         task.wait(math.random(21, 35) / 10) 
                     else
-                        -- Jika UFO baru saja hilang/selesai, jalankan 'coop' 1 kali
                         if wasUfoActive then
                             wasUfoActive = false
                             pcall(function()
@@ -278,7 +340,6 @@ MainTab:Button({
         local comboCounts = {}
         local rawChildren = grid:GetChildren()
 
-        -- Scan dengan Proteksi Thread (Per-Batch 10 item)
         for i = 1, #rawChildren do
             local item = rawChildren[i]
             if i % 10 == 0 then task.wait() end
@@ -349,7 +410,6 @@ MainTab:Toggle({
                                 end)
                             end
 
-                            -- Fuse Pasangan (Dengan Delay Aman Anti-Ban)
                             while #targetIds >= 2 and AutoFuse do
                                 local id1 = table.remove(targetIds, 1)
                                 local id2 = table.remove(targetIds, 1)
