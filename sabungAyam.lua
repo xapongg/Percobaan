@@ -188,7 +188,7 @@ MainTab:Toggle({
 --// AUTO TOUCH NEST EGG (JARAK DEKAT SAJA)
 --------------------------------------------------
 local AutoTouchEgg = false
-local MaxTouchDistance = 15 -- Jarak maksimal (dalam studs) untuk disentuh
+local MaxTouchDistance = 20-- Jarak maksimal (dalam studs) untuk disentuh
 
 MainTab:Toggle({
     Title = "Auto Touch Nest Egg (Jarak Dekat)",
