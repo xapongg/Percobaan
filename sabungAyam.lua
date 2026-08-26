@@ -158,7 +158,7 @@ local MainTab = Window:Tab({
 MainTab:Select()
 
 --------------------------------------------------
---// AUTO SPAM LIVE UFO (STEALTH VERSION)
+--// AUTO SPAM LIVE UFO (STEALTH + AUTO RESET COOP)
 --------------------------------------------------
 local AutoSpamUFO = false
 
@@ -183,20 +183,30 @@ end
 
 MainTab:Toggle({
     Title = "Auto Chaos (Live UFO)",
-    Desc = "Spam remote chaos dengan delay acak biar ga kena kick",
+    Desc = "Spam remote chaos saat UFO ada, dan set 'coop' 1x saat UFO hilang",
     Value = false,
     Callback = function(Value)
         AutoSpamUFO = Value
 
         if AutoSpamUFO then
             task.spawn(function()
+                local wasUfoActive = false
+
                 while AutoSpamUFO do
                     if isLiveUFOActive() then
+                        wasUfoActive = true
                         pcall(function()
                             ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("SetChickenOrder"):FireServer("chaos")
                         end)
                         task.wait(math.random(21, 35) / 10) 
                     else
+                        -- Jika UFO baru saja hilang/selesai, jalankan 'coop' 1 kali
+                        if wasUfoActive then
+                            wasUfoActive = false
+                            pcall(function()
+                                ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("SetChickenOrder"):FireServer("coop")
+                            end)
+                        end
                         task.wait(1) 
                     end
                 end
@@ -206,12 +216,32 @@ MainTab:Toggle({
 })
 
 --------------------------------------------------
---// AUTO FUSE CHICKENS (SAFE NON-KICK SCANNER)
+--// AUTO FUSE CHICKENS (SAFE NON-KICK + RARITY)
 --------------------------------------------------
 local AutoFuse = false
-local SelectedRawName = ""
+local SelectedComboTarget = ""
 
--- Safe UI Grid Getter (Menggunakan Safe Indexing)
+local RarityColors = {
+    ["Common"]    = Color3.fromRGB(118, 142, 176), 
+    ["Uncommon"]  = Color3.fromRGB(95, 190, 78),     
+    ["Rare"]      = Color3.fromRGB(0, 168, 255),     
+    ["Epic"]      = Color3.fromRGB(128, 0, 128),   
+    ["Legendary"] = Color3.fromRGB(255, 165, 0)    
+}
+
+local function getRarityFromColor(color)
+    for rarityName, rarityColor in pairs(RarityColors) do
+        local diffR = math.abs(color.R - rarityColor.R)
+        local diffG = math.abs(color.G - rarityColor.G)
+        local diffB = math.abs(color.B - rarityColor.B)
+        
+        if diffR < 0.05 and diffG < 0.05 and diffB < 0.05 then
+            return rarityName
+        end
+    end
+    return "Unknown"
+end
+
 local function getChickenGrid()
     local success, result = pcall(function()
         return LocalPlayer.PlayerGui.Collection.Frame.main.panel.face.content.content.right.panel.face.content.inner.grid
@@ -222,12 +252,16 @@ end
 
 local FuseDropdown = MainTab:Dropdown({
     Title = "Pilih Target Fuse",
-    Desc = "Pilih jenis ayam yang ingin digabungkan",
+    Desc = "Format: Nama [Rarity] (Jumlah)",
     Values = {"(Klik Scan Dulu)"},
     Value = "(Klik Scan Dulu)",
     Callback = function(Value)
-        -- Ambil teks murni nama ayam tanpa teks jumlah "(x)"
-        SelectedRawName = string.gsub(Value, "%s*%(%d+%)", "")
+        local name, rarity = string.match(Value, "^(.-)%s*%[(.-)%]")
+        if name and rarity then
+            SelectedComboTarget = name .. "-" .. rarity
+        else
+            SelectedComboTarget = ""
+        end
     end
 })
 
@@ -241,7 +275,7 @@ MainTab:Button({
             return 
         end
 
-        local nameCounts = {}
+        local comboCounts = {}
         local rawChildren = grid:GetChildren()
 
         -- Scan dengan Proteksi Thread (Per-Batch 10 item)
@@ -252,18 +286,26 @@ MainTab:Button({
             pcall(function()
                 if item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" and item.Visible then
                     local nameLabel = item.name.name
-                    if nameLabel and nameLabel.Text ~= "" then
+                    local faceFrame = item.face
+
+                    if nameLabel and faceFrame and nameLabel.Text ~= "" then
                         local cName = nameLabel.Text
-                        nameCounts[cName] = (nameCounts[cName] or 0) + 1
+                        local cRarity = getRarityFromColor(faceFrame.BackgroundColor3)
+                        local comboKey = cName .. "-" .. cRarity
+
+                        comboCounts[comboKey] = (comboCounts[comboKey] or 0) + 1
                     end
                 end
             end)
         end
 
         local formattedList = {}
-        for chickenName, count in pairs(nameCounts) do
+        for comboKey, count in pairs(comboCounts) do
             if count >= 2 then
-                table.insert(formattedList, chickenName .. " (" .. count .. ")")
+                local name, rarity = string.match(comboKey, "^(.-)%-(.+)$")
+                if name and rarity then
+                    table.insert(formattedList, name .. " [" .. rarity .. "] (" .. count .. ")")
+                end
             end
         end
 
@@ -287,7 +329,7 @@ MainTab:Toggle({
         if AutoFuse then
             task.spawn(function()
                 while AutoFuse do
-                    if SelectedRawName ~= "" and SelectedRawName ~= "(Klik Scan Dulu)" then
+                    if SelectedComboTarget ~= "" then
                         local grid = getChickenGrid()
                         
                         if grid then
@@ -296,7 +338,11 @@ MainTab:Toggle({
                             for _, item in ipairs(grid:GetChildren()) do
                                 pcall(function()
                                     if item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" then
-                                        if item.name.name.Text == SelectedRawName then
+                                        local cName = item.name.name.Text
+                                        local cRarity = getRarityFromColor(item.face.BackgroundColor3)
+                                        local currentCombo = cName .. "-" .. cRarity
+
+                                        if currentCombo == SelectedComboTarget then
                                             table.insert(targetIds, item.Name)
                                         end
                                     end
@@ -313,7 +359,7 @@ MainTab:Toggle({
                                     ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("FuseChickens"):InvokeServer(unpack(args))
                                 end)
 
-                                task.wait(0.5) -- Jeda disesuaikan menjadi 0.5s agar server tidak mendeteksi spam remote
+                                task.wait(0.5)
                             end
                         end
                     end
