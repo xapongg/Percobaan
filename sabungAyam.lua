@@ -158,16 +158,16 @@ local MainTab = Window:Tab({
 MainTab:Select()
 
 --------------------------------------------------
---// AUTO TWEEN SCRAP & REBIRTH
+--// AUTO TWEEN SCRAP & REBIRTH (REALTIME TIMING)
 --------------------------------------------------
 local TweenService = game:GetService("TweenService")
 local AutoScrapTween = false
 
 MainTab:Button({
     Title = "Start Scrap & Rebirth Tween",
-    Desc = "Tween ke semua Loose Scrap, lalu ke Recycler1 + Auto Rebirth",
+    Desc = "Tween lancar tanpa berhenti + Rebirth pas di jalan",
     Callback = function()
-        if AutoScrapTween then return end -- Cegah spam klik jika tween sedang berjalan
+        if AutoScrapTween then return end 
         AutoScrapTween = true
 
         task.spawn(function()
@@ -180,17 +180,21 @@ MainTab:Button({
                 return
             end
 
-            -- Speed Tween (Bisa disesuaikan, semakin besar semakin kencang)
-            local tweenSpeed = 60 
+            -- Kecepatan Tween (Bisa disesuaikan)
+            local tweenSpeed = 50 
 
-            local function tweenTo(targetCFrame)
-                local distance = (rootPart.Position - targetCFrame.Position).Magnitude
+            -- Helper Tween: Tetap berdiri tegak & gerakan halus
+            local function tweenTo(targetPosition)
+                local currentYaw = math.rad(rootPart.Orientation.Y)
+                local uprightCFrame = CFrame.new(targetPosition) * CFrame.Angles(0, currentYaw, 0)
+
+                local distance = (rootPart.Position - targetPosition).Magnitude
                 local tweenTime = distance / tweenSpeed
                 local tweenInfo = TweenInfo.new(tweenTime, Enum.EasingStyle.Linear)
                 
-                local tween = TweenService:Create(rootPart, tweenInfo, {CFrame = targetCFrame})
+                local tween = TweenService:Create(rootPart, tweenInfo, {CFrame = uprightCFrame})
                 tween:Play()
-                tween.Completed:Wait()
+                return tween
             end
 
             -- 1. Tween ke semua workspace.PitScrap.Loose
@@ -200,42 +204,44 @@ MainTab:Button({
                     if looseItem.Name == "Loose" and AutoScrapTween then
                         local targetPart = looseItem:IsA("BasePart") and looseItem or looseItem:FindFirstChildWhichIsA("BasePart")
                         if targetPart then
-                            tweenTo(targetPart.CFrame)
-                            task.wait(0.1) -- Jeda sebentar di tiap loose item
+                            local tw = tweenTo(targetPart.Position)
+                            tw.Completed:Wait()
+                            task.wait(0.05)
                         end
                     end
                 end
             end
 
-            -- 2. Tween ke workspace.Recyclers.Recycler1 + Fire Rebirth 10 studs sebelum sampai
+            -- 2. Tween ke Recycler1 + Fire Rebirth instan 10 studs sebelum sampai (TANPA STUCK/STOP)
             local recyclers = workspace:FindFirstChild("Recyclers")
             local recycler1 = recyclers and recyclers:FindFirstChild("Recycler1")
             
             if recycler1 then
                 local targetPart = recycler1:IsA("BasePart") and recycler1 or recycler1:FindFirstChildWhichIsA("BasePart")
                 if targetPart then
-                    local targetPosition = targetPart.Position
-                    local currentPosition = rootPart.Position
+                    local targetPos = targetPart.Position
+                    local startPos = rootPart.Position
                     
-                    -- Hitung posisi 10 studs sebelum sampai di Recycler1
-                    local direction = (targetPosition - currentPosition).Unit
-                    local distance = (targetPosition - currentPosition).Magnitude
-                    
-                    local stopBeforeDistance = math.max(0, distance - 10)
-                    local positionBeforeRecycler = currentPosition + (direction * stopBeforeDistance)
-                    local cframeBeforeRecycler = CFrame.new(positionBeforeRecycler, targetPosition)
+                    local direction = (targetPos - startPos).Unit
+                    local totalDistance = (targetPos - startPos).Magnitude
+                    local stopDistance = math.max(0, totalDistance - 10)
+                    local positionBeforeRecycler = startPos + (direction * stopDistance)
 
-                    -- Tween ke titik 10 studs sebelum Recycler1
-                    tweenTo(cframeBeforeRecycler)
+                    -- Phase 1: Tween ke titik 10 studs dari Recycler
+                    local tw1 = tweenTo(positionBeforeRecycler)
+                    tw1.Completed:Wait()
 
-                    -- Fire Remote Rebirth 1x
-                    pcall(function()
-                        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Rebirth"):InvokeServer()
+                    -- Fire Rebirth INSTAN dalam 1 frame (Tanpa task.wait / pause)
+                    task.spawn(function()
+                        pcall(function()
+                            ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Rebirth"):InvokeServer()
+                        end)
                     end)
-                    WindUI:Notify({Title = "Rebirth", Content = "Remote Rebirth berhasil di-fire!", Duration = 3})
+                    WindUI:Notify({Title = "Rebirth", Content = "Rebirth Fired on Timing!", Duration = 2})
 
-                    -- Lanjutkan tween sisa 10 studs ke Recycler1
-                    tweenTo(targetPart.CFrame)
+                    -- Phase 2: Langsung sambung tween sisa 10 studs ke Recycler1 tanpa patah
+                    local tw2 = tweenTo(targetPos)
+                    tw2.Completed:Wait()
                 end
             end
 
