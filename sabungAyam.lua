@@ -176,7 +176,6 @@ MainTab:Toggle({
                         ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("IncubatorClaim"):InvokeServer()
                     end)
 
-                    -- Delay acak antara 180 detik (3 menit) sampai 300 detik (5 menit)
                     local randomDelay = math.random(180, 300)
                     task.wait(randomDelay)
                 end
@@ -186,13 +185,14 @@ MainTab:Toggle({
 })
 
 --------------------------------------------------
---// AUTO TOUCH NEST EGG (RANDOM 1 - 2 MENIT)
+--// AUTO TOUCH NEST EGG (JARAK DEKAT SAJA)
 --------------------------------------------------
 local AutoTouchEgg = false
+local MaxTouchDistance = 15 -- Jarak maksimal (dalam studs) untuk disentuh
 
 MainTab:Toggle({
-    Title = "Auto Touch Nest Egg",
-    Desc = "Otomatis touch NestEgg secara acak tiap 1-2 menit",
+    Title = "Auto Touch Nest Egg (Jarak Dekat)",
+    Desc = "Hanya menyentuh NestEgg yang berjarak dekat dari karakter",
     Value = false,
     Callback = function(Value)
         AutoTouchEgg = Value
@@ -201,14 +201,27 @@ MainTab:Toggle({
             task.spawn(function()
                 while AutoTouchEgg do
                     pcall(function()
-                        local nestEgg = workspace:FindFirstChild("NestEggs") and workspace.NestEggs:FindFirstChild("NestEgg")
+                        local nestEggsFolder = workspace:FindFirstChild("NestEggs")
                         local character = LocalPlayer.Character
                         local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 
-                        if nestEgg and rootPart then
-                            firetouchinterest(rootPart, nestEgg, 0)
-                            task.wait(0.1)
-                            firetouchinterest(rootPart, nestEgg, 1)
+                        if nestEggsFolder and rootPart then
+                            -- Cari semua objek NestEgg di dalam folder
+                            for _, egg in ipairs(nestEggsFolder:GetChildren()) do
+                                local eggPart = egg:IsA("BasePart") and egg or egg:FindFirstChildWhichIsA("BasePart")
+                                
+                                if eggPart then
+                                    -- Hitung jarak antara karakter dan NestEgg
+                                    local distance = (rootPart.Position - eggPart.Position).Magnitude
+                                    
+                                    -- Jika jarak dekat (<= 15 studs), sentuh
+                                    if distance <= MaxTouchDistance then
+                                        firetouchinterest(rootPart, eggPart, 0)
+                                        task.wait(0.1)
+                                        firetouchinterest(rootPart, eggPart, 1)
+                                    end
+                                end
+                            end
                         end
                     end)
 
@@ -363,7 +376,7 @@ MainTab:Button({
         local formattedList = {}
         for comboKey, count in pairs(comboCounts) do
             if count >= 2 then
-                local name, rarity = string.match(comboKey, "^(.-)%-(.+)$")
+                local name, rarity = string.match(comboKey, "^(.-)%-%(.+)$")
                 if name and rarity then
                     table.insert(formattedList, name .. " [" .. rarity .. "] (" .. count .. ")")
                 end
@@ -429,3 +442,4 @@ MainTab:Toggle({
         end
     end
 })
+
