@@ -185,14 +185,13 @@ MainTab:Toggle({
 })
 
 --------------------------------------------------
---// AUTO TOUCH NEST EGG (JARAK DEKAT SAJA)
+--// AUTO TOUCH NEST EGG (FAST & CLOSEST DETECTOR)
 --------------------------------------------------
 local AutoTouchEgg = false
-local MaxTouchDistance = 20-- Jarak maksimal (dalam studs) untuk disentuh
 
 MainTab:Toggle({
-    Title = "Auto Touch Nest Egg (Jarak Dekat)",
-    Desc = "Hanya menyentuh NestEgg yang berjarak dekat dari karakter",
+    Title = "Auto Touch Nest Egg (Realtime)",
+    Desc = "Touch NestEgg terdekat secara instan saat telur spawn",
     Value = false,
     Callback = function(Value)
         AutoTouchEgg = Value
@@ -206,27 +205,31 @@ MainTab:Toggle({
                         local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 
                         if nestEggsFolder and rootPart then
-                            -- Cari semua objek NestEgg di dalam folder
+                            local closestEggPart = nil
+                            local shortestDistance =20 -- Jarak maksimal 15 studs (hanya yang dekat)
+
                             for _, egg in ipairs(nestEggsFolder:GetChildren()) do
                                 local eggPart = egg:IsA("BasePart") and egg or egg:FindFirstChildWhichIsA("BasePart")
-                                
                                 if eggPart then
-                                    -- Hitung jarak antara karakter dan NestEgg
-                                    local distance = (rootPart.Position - eggPart.Position).Magnitude
-                                    
-                                    -- Jika jarak dekat (<= 15 studs), sentuh
-                                    if distance <= MaxTouchDistance then
-                                        firetouchinterest(rootPart, eggPart, 0)
-                                        task.wait(0.1)
-                                        firetouchinterest(rootPart, eggPart, 1)
+                                    local dist = (rootPart.Position - eggPart.Position).Magnitude
+                                    if dist <= shortestDistance then
+                                        shortestDistance = dist
+                                        closestEggPart = eggPart
                                     end
                                 end
+                            end
+
+                            -- Jika menemukan telur di jarak dekat, langsung sentuh
+                            if closestEggPart then
+                                firetouchinterest(rootPart, closestEggPart, 0)
+                                task.wait(0.02)
+                                firetouchinterest(rootPart, closestEggPart, 1)
                             end
                         end
                     end)
 
-                    local randomDelay = math.random(60, 120)
-                    task.wait(randomDelay)
+                    -- Jeda mikro (0.1 detik) agar loop berjalan cepat merespon telur spawn tanpa bikin FPS drop
+                    task.wait(1)
                 end
             end)
         end
@@ -291,7 +294,7 @@ MainTab:Toggle({
 })
 
 --------------------------------------------------
---// AUTO FUSE CHICKENS (SAFE NON-KICK + RARITY)
+--// AUTO FUSE CHICKENS (FIXED PATTERN & NON-KICK)
 --------------------------------------------------
 local AutoFuse = false
 local SelectedComboTarget = ""
@@ -342,7 +345,7 @@ local FuseDropdown = MainTab:Dropdown({
 
 MainTab:Button({
     Title = "Scan Inventory Ayam",
-    Desc = "Scan aman tanpa memicu Kick Anti-Cheat",
+    Desc = "Scan aman membaca semua ID ayam (c1, c527, dst.)",
     Callback = function()
         local grid = getChickenGrid()
         if not grid then 
@@ -355,12 +358,12 @@ MainTab:Button({
 
         for i = 1, #rawChildren do
             local item = rawChildren[i]
-            if i % 10 == 0 then task.wait() end
+            if i % 15 == 0 then task.wait() end
 
             pcall(function()
                 if item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" and item.Visible then
-                    local nameLabel = item.name.name
-                    local faceFrame = item.face
+                    local nameLabel = item:FindFirstChild("name") and item.name:FindFirstChild("name")
+                    local faceFrame = item:FindFirstChild("face")
 
                     if nameLabel and faceFrame and nameLabel.Text ~= "" then
                         local cName = nameLabel.Text
@@ -376,7 +379,7 @@ MainTab:Button({
         local formattedList = {}
         for comboKey, count in pairs(comboCounts) do
             if count >= 2 then
-                local name, rarity = string.match(comboKey, "^(.-)%-%(.+)$")
+                local name, rarity = string.match(comboKey, "^(.-)%-(.+)$")
                 if name and rarity then
                     table.insert(formattedList, name .. " [" .. rarity .. "] (" .. count .. ")")
                 end
@@ -412,12 +415,17 @@ MainTab:Toggle({
                             for _, item in ipairs(grid:GetChildren()) do
                                 pcall(function()
                                     if item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" then
-                                        local cName = item.name.name.Text
-                                        local cRarity = getRarityFromColor(item.face.BackgroundColor3)
-                                        local currentCombo = cName .. "-" .. cRarity
+                                        local nameLabel = item:FindFirstChild("name") and item.name:FindFirstChild("name")
+                                        local faceFrame = item:FindFirstChild("face")
 
-                                        if currentCombo == SelectedComboTarget then
-                                            table.insert(targetIds, item.Name)
+                                        if nameLabel and faceFrame then
+                                            local cName = nameLabel.Text
+                                            local cRarity = getRarityFromColor(faceFrame.BackgroundColor3)
+                                            local currentCombo = cName .. "-" .. cRarity
+
+                                            if currentCombo == SelectedComboTarget then
+                                                table.insert(targetIds, item.Name)
+                                            end
                                         end
                                     end
                                 end)
