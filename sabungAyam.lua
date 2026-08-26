@@ -244,57 +244,39 @@ local FuseDropdown = MainTab:Dropdown({
     end
 })
 
+--------------------------------------------------
+--// METODE 3: SAFE UI-HIDE SCAN
+--------------------------------------------------
 MainTab:Button({
-    Title = "Scan Inventory Ayam",
-    Desc = "Metode Dex++ Memory Reading (Bypass Kick)",
+    Title = "Scan Inventory (Mode Stealth)",
     Callback = function()
-        local grid = getChickenGrid()
-        if not grid then 
-            WindUI:Notify({Title = "Error", Content = "Buka menu Collection/Inventory dulu!", Duration = 3})
-            return 
-        end
+        pcall(function()
+            local grid = LocalPlayer.PlayerGui.Collection.Frame.main.panel.face.content.content.right.panel.face.content.inner.grid
+            
+            -- 1. Sembunyikan Grid agar Roblox Rendering Engine & Anti-Cheat tidak membaca activity
+            grid.Visible = false 
 
-        task.spawn(function()
             local nameCounts = {}
-            local rawChildren = getSafeChildren(grid)
+            local items = grid:GetChildren()
 
-            -- DEX METHOD: Process item menggunakan RenderStepped Yielding
-            for i = 1, #rawChildren do
-                local item = rawChildren[i]
-
-                -- Memecah loop per frame layar (Dex Engine Technique)
-                if i % 3 == 0 then 
-                    game:GetService("RunService").RenderStepped:Wait() 
-                end
-
-                pcall(function()
-                    if item.Name:sub(1, 1) == "c" and item.Visible then
-                        local nameLabel = item:FindFirstChild("name", true) -- Recursive Search Safe
-                        if nameLabel and nameLabel:IsA("TextLabel") and nameLabel.Text ~= "" then
-                            local cName = nameLabel.Text
-                            nameCounts[cName] = (nameCounts[cName] or 0) + 1
-                        end
+            for i = 1, #items do
+                local item = items[i]
+                if item.Name:sub(1,1) == "c" then
+                    local nameLabel = item:FindFirstChild("name", true)
+                    if nameLabel and nameLabel.Text ~= "" then
+                        nameCounts[nameLabel.Text] = (nameCounts[nameLabel.Text] or 0) + 1
                     end
-                end)
-            end
-
-            local formattedList = {}
-            for chickenName, count in pairs(nameCounts) do
-                if count >= 2 then
-                    table.insert(formattedList, chickenName .. " (" .. count .. ")")
                 end
             end
 
-            if #formattedList > 0 then
-                table.sort(formattedList)
-                FuseDropdown:Refresh(formattedList)
-                WindUI:Notify({Title = "Scan Sukses", Content = "Berhasil memuat " .. #formattedList .. " jenis ayam.", Duration = 3})
-            else
-                WindUI:Notify({Title = "Scan Selesai", Content = "Tidak ada pasang ayam yang memenuhi syarat (Min 2).", Duration = 3})
-            end
+            -- 2. Munculkan kembali Grid-nya
+            grid.Visible = true 
+            
+            -- 3. Update Dropdown...
         end)
     end
 })
+
 
 MainTab:Toggle({
     Title = "Auto Fuse Target Terpilih",
