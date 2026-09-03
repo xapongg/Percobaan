@@ -307,16 +307,46 @@ MainTab:Toggle({
 })
 
 --------------------------------------------------
---// AUTO FUSE CHICKENS (AUTO-SCAN & MULTI-PAIR FUSE)
+--// AUTO FUSE CHICKENS (PATH BARU + MULTI-FUSE)
 --------------------------------------------------
 local AutoFuse = false
 local SelectedComboTarget = ""
 
+local RarityColors = {
+    ["Common"]    = Color3.fromRGB(118, 142, 176), 
+    ["Uncommon"]  = Color3.fromRGB(95, 190, 78),     
+    ["Rare"]      = Color3.fromRGB(0, 168, 255),     
+    ["Epic"]      = Color3.fromRGB(128, 0, 128),   
+    ["Legendary"] = Color3.fromRGB(255, 165, 0)    
+}
+
+local function getRarityFromColor(color)
+    for rarityName, rarityColor in pairs(RarityColors) do
+        local diffR = math.abs(color.R - rarityColor.R)
+        local diffG = math.abs(color.G - rarityColor.G)
+        local diffB = math.abs(color.B - rarityColor.B)
+        
+        if diffR < 0.05 and diffG < 0.05 and diffB < 0.05 then
+            return rarityName
+        end
+    end
+    return "Unknown"
+end
+
+-- Path baru Scrolling Frame ayam
+local function getChickenScrollingFrame()
+    local success, result = pcall(function()
+        return LocalPlayer.PlayerGui.Collection.Flock.ChickenHolder.ScrollingFrame
+    end)
+    if success and result then return result end
+    return nil
+end
+
 local FuseDropdown = MainTab:Dropdown({
     Title = "Pilih Target Fuse",
-    Desc = "Otomatis memperbarui daftar ayam kembar",
-    Values = {"(Menunggu Scan Otomatis...)"},
-    Value = "(Menunggu Scan Otomatis...)",
+    Desc = "Format: Nama [Rarity] (Jumlah)",
+    Values = {"(Klik Scan Dulu)"},
+    Value = "(Klik Scan Dulu)",
     Callback = function(Value)
         local name, rarity = string.match(Value, "^(.-)%s*%[(.-)%]")
         if name and rarity then
@@ -327,60 +357,63 @@ local FuseDropdown = MainTab:Dropdown({
     end
 })
 
--- Background Auto-Scanner Task
-task.spawn(function()
-    while true do
-        pcall(function()
-            local scrollingFrame = getChickenScrollingFrame()
-            if scrollingFrame then
-                local comboCounts = {}
-                local rawChildren = scrollingFrame:GetChildren()
+MainTab:Button({
+    Title = "Scan Inventory Ayam",
+    Desc = "Scan aman membaca semua ID ayam dari Flock",
+    Callback = function()
+        local scrollingFrame = getChickenScrollingFrame()
+        if not scrollingFrame then 
+            WindUI:Notify({Title = "Error", Content = "Buka menu Collection/Flock di game dulu!", Duration = 3})
+            return 
+        end
 
-                for _, item in ipairs(rawChildren) do
-                    pcall(function()
-                        if item and item:IsA("GuiObject") then
-                            local nameLabel = item:FindFirstChild("ChickenName")
-                            local faceFrame = item:FindFirstChild("face") or item:FindFirstChild("Background")
+        local comboCounts = {}
+        local rawChildren = scrollingFrame:GetChildren()
 
-                            if nameLabel and nameLabel:IsA("TextLabel") and nameLabel.Text ~= "" then
-                                local cName = nameLabel.Text
-                                local cRarity = "Common"
-                                if faceFrame then
-                                    cRarity = getRarityFromColor(faceFrame.BackgroundColor3)
-                                end
-                                
-                                local comboKey = cName .. "-" .. cRarity
-                                comboCounts[comboKey] = (comboCounts[comboKey] or 0) + 1
-                            end
-                        end
-                    end)
-                end
+        for i = 1, #rawChildren do
+            local item = rawChildren[i]
+            if i % 15 == 0 then task.wait() end
 
-                local formattedList = {}
-                for comboKey, count in pairs(comboCounts) do
-                    if count >= 2 then
-                        local name, rarity = string.match(comboKey, "^(.-)%-(.+)$")
-                        if name and rarity then
-                            table.insert(formattedList, name .. " [" .. rarity .. "] (" .. count .. ")")
-                        end
+            pcall(function()
+                -- Memastikan objek adalah GuiObject dan namanya diawali 'c' (misal c13)
+                if item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" and item.Visible then
+                    local nameLabel = item:FindFirstChild("ChickenName")
+                    local faceFrame = item:FindFirstChild("face") or item:FindFirstChild("Background")
+
+                    if nameLabel and nameLabel:IsA("TextLabel") and nameLabel.Text ~= "" then
+                        local cName = nameLabel.Text
+                        local cRarity = faceFrame and getRarityFromColor(faceFrame.BackgroundColor3) or "Common"
+                        local comboKey = cName .. "-" .. cRarity
+
+                        comboCounts[comboKey] = (comboCounts[comboKey] or 0) + 1
                     end
                 end
+            end)
+        end
 
-                if #formattedList > 0 then
-                    table.sort(formattedList)
-                    FuseDropdown:Refresh(formattedList)
-                else
-                    FuseDropdown:Refresh({"(Tidak ada ayam kembar)"})
+        local formattedList = {}
+        for comboKey, count in pairs(comboCounts) do
+            if count >= 2 then
+                local name, rarity = string.match(comboKey, "^(.-)%-(.+)$")
+                if name and rarity then
+                    table.insert(formattedList, name .. " [" .. rarity .. "] (" .. count .. ")")
                 end
             end
-        end)
-        task.wait(5)
+        end
+
+        if #formattedList > 0 then
+            table.sort(formattedList)
+            FuseDropdown:Refresh(formattedList)
+            WindUI:Notify({Title = "Scan Sukses", Content = "Berhasil memuat " .. #formattedList .. " jenis ayam.", Duration = 3})
+        else
+            WindUI:Notify({Title = "Scan Selesai", Content = "Tidak ada pasang ayam yang memenuhi syarat (Min 2).", Duration = 3})
+        end
     end
-end)
+})
 
 MainTab:Toggle({
     Title = "Auto Fuse Target Terpilih",
-    Desc = "Otomatis fuse bergantian semua ID ayam kembar yang terpilih",
+    Desc = "Menjalankan Fuse otomatis bergantian sampai habis",
     Value = false,
     Callback = function(Value)
         AutoFuse = Value
@@ -388,62 +421,47 @@ MainTab:Toggle({
         if AutoFuse then
             task.spawn(function()
                 while AutoFuse do
-                    if SelectedComboTarget ~= "" and SelectedComboTarget ~= "(Menunggu Scan Otomatis...)" and SelectedComboTarget ~= "(Tidak ada ayam kembar)" then
+                    if SelectedComboTarget ~= "" and SelectedComboTarget ~= "(Klik Scan Dulu)" then
                         local scrollingFrame = getChickenScrollingFrame()
                         
                         if scrollingFrame then
                             local targetIds = {}
 
-                            -- Kumpulkan SEMUA ID ayam yang cocok saat ini
                             for _, item in ipairs(scrollingFrame:GetChildren()) do
                                 pcall(function()
-                                    local nameLabel = item:FindFirstChild("ChickenName")
-                                    local faceFrame = item:FindFirstChild("face") or item:FindFirstChild("Background")
+                                    if item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" then
+                                        local nameLabel = item:FindFirstChild("ChickenName")
+                                        local faceFrame = item:FindFirstChild("face") or item:FindFirstChild("Background")
 
-                                    if nameLabel and nameLabel:IsA("TextLabel") then
-                                        local cName = nameLabel.Text
-                                        local cRarity = "Common"
-                                        if faceFrame then
-                                            cRarity = getRarityFromColor(faceFrame.BackgroundColor3)
-                                        end
-                                        
-                                        local currentCombo = cName .. "-" .. cRarity
+                                        if nameLabel and nameLabel:IsA("TextLabel") then
+                                            local cName = nameLabel.Text
+                                            local cRarity = faceFrame and getRarityFromColor(faceFrame.BackgroundColor3) or "Common"
+                                            local currentCombo = cName .. "-" .. cRarity
 
-                                        if currentCombo == SelectedComboTarget then
-                                            table.insert(targetIds, item.Name)
+                                            if currentCombo == SelectedComboTarget then
+                                                table.insert(targetIds, item.Name)
+                                            end
                                         end
                                     end
                                 end)
                             end
 
-                            -- Jika ada minimal 2 ayam, ambil 2 ID terdepan untuk difuse, lalu ulangi terus sampai habis
-                            if #targetIds >= 2 then
-                                local id1 = targetIds[1]
-                                local id2 = targetIds[2]
-
-                                local args = {
-                                    id1,
-                                    id2,
-                                    {},
-                                    [5] = "a"
-                                }
+                            while #targetIds >= 2 and AutoFuse do
+                                local id1 = table.remove(targetIds, 1)
+                                local id2 = table.remove(targetIds, 1)
 
                                 pcall(function()
+                                    local args = { id1, id2, {}, [5] = "a" }
                                     ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("FuseChickens"):InvokeServer(unpack(args))
                                 end)
-                                
-                                -- Jeda singkat agar server memproses fusi sebelum pasang berikutnya ditarik
-                                task.wait(1.5)
-                            else
-                                -- Jika sisa ayam kurang dari 2, tunggu sebentar sebelum scan ulang
-                                task.wait(3)
+
+                                task.wait(0.8)
                             end
                         end
                     end
-                    task.wait(1)
+                    task.wait(2.5)
                 end
             end)
         end
     end
 })
-
