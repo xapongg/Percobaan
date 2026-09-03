@@ -28,6 +28,7 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UIS = game:GetService("UserInputService")
 
 --// Wind UI
 local Icons = loadstring(game:HttpGetAsync(
