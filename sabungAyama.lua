@@ -501,7 +501,7 @@ MainTab:Button({
 })
 
 --------------------------------------------------
---// AUTO FUSE TARGET TERPILIH (FIXED LOOP & TRIGGER)
+--// AUTO FUSE TARGET TERPILIH (SIMPLIFIED & FIXED)
 --------------------------------------------------
 MainTab:Toggle({
     Title = "Auto Fuse Target Terpilih",
@@ -519,42 +519,52 @@ MainTab:Toggle({
                         if scrollingFrame then
                             local targetIds = {}
 
+                            -- Loop semua ayam di ScrollingFrame
                             for _, item in ipairs(scrollingFrame:GetChildren()) do
                                 pcall(function()
-                                    if item and item:IsA("GuiObject") then
-                                        local nameLabel = item:FindFirstChild("ChickenName")
-                                        local faceFrame = item:FindFirstChild("face") or item:FindFirstChild("Background") or item:FindFirstChild("Main")
+                                    local nameLabel = item:FindFirstChild("ChickenName")
+                                    local faceFrame = item:FindFirstChild("face") or item:FindFirstChild("Background")
 
-                                        if nameLabel and nameLabel:IsA("TextLabel") then
-                                            local cName = nameLabel.Text
-                                            local cRarity = "Common"
-                                            if faceFrame and faceFrame:IsA("GuiObject") then
-                                                cRarity = getRarityFromColor(faceFrame.BackgroundColor3)
-                                            end
-                                            
-                                            local currentCombo = cName .. "-" .. cRarity
+                                    if nameLabel and nameLabel:IsA("TextLabel") then
+                                        local cName = nameLabel.Text
+                                        local cRarity = "Common"
+                                        if faceFrame then
+                                            cRarity = getRarityFromColor(faceFrame.BackgroundColor3)
+                                        end
+                                        
+                                        local currentCombo = cName .. "-" .. cRarity
 
-                                            if currentCombo == SelectedComboTarget then
-                                                -- Mengambil ID unik dari nama objek (misal 'c13')
-                                                table.insert(targetIds, item.Name)
-                                            end
+                                        -- Jika cocok dengan target dropdown, masukkan ID-nya (item.Name / misal c13)
+                                        if currentCombo == SelectedComboTarget then
+                                            table.insert(targetIds, item.Name)
                                         end
                                     end
                                 end)
                             end
 
-                            -- Eksekusi fuse jika ditemukan minimal 2 ayam yang cocok
+                            -- Jika ada minimal 2 ayam yang cocok, jalankan remote fuse
                             if #targetIds >= 2 then
                                 local id1 = targetIds[1]
                                 local id2 = targetIds[2]
 
-                                pcall(function()
-                                    local args = { id1, id2, {}, [5] = "a" }
+                                local args = {
+                                    id1,
+                                    id2,
+                                    {},
+                                    [5] = "a"
+                                }
+
+                                local success, err = pcall(function()
                                     ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("FuseChickens"):InvokeServer(unpack(args))
                                 end)
                                 
-                                -- Jeda agar animasi/request server sempat memproses
-                                task.wait(1.5)
+                                if success then
+                                    print("[Auto Fuse] Berhasil fuse:", id1, "dan", id2)
+                                else
+                                    warn("[Auto Fuse] Gagal:", err)
+                                end
+                                
+                                task.wait(1.5) -- Jeda antar fusi agar server tidak menolak
                             end
                         end
                     end
