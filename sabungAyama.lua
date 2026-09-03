@@ -1,5 +1,4 @@
 -- loadstring(game:HttpGet("https://raw.githubusercontent.com/xapongg/Percobaan/refs/heads/main/sabungAyama.lua"))()
--- baru nih
 
 --// Services
 local Players = game:GetService("Players")
@@ -157,13 +156,13 @@ local MainTab = Window:Tab({
 MainTab:Select()
 
 --------------------------------------------------
---// AUTO CLAIM INCUBATOR (SAFE DELAY)
+--// AUTO CLAIM INCUBATOR (SAFE RANDOM 4-7 MENIT)
 --------------------------------------------------
 local AutoClaimIncubator = false
 
 MainTab:Toggle({
     Title = "Auto Claim Incubator",
-    Desc = "Otomatis claim incubator secara acak tiap 3-5 menit",
+    Desc = "Otomatis claim incubator secara acak tiap 4-7 menit",
     Value = false,
     Callback = function(Value)
         AutoClaimIncubator = Value
@@ -174,7 +173,7 @@ MainTab:Toggle({
                     pcall(function()
                         ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("IncubatorClaim"):InvokeServer()
                     end)
-                    local randomDelay = math.random(180, 300)
+                    local randomDelay = math.random(240, 420)
                     task.wait(randomDelay)
                 end
             end)
@@ -183,13 +182,13 @@ MainTab:Toggle({
 })
 
 --------------------------------------------------
---// AUTO TOUCH NEST EGG (ANTI-DETECTION DELAY)
+--// AUTO TOUCH NEST EGG (SLOW & STABLE)
 --------------------------------------------------
 local AutoTouchEgg = false
 
 MainTab:Toggle({
     Title = "Auto Touch Nest Egg (Safe Mode)",
-    Desc = "Touch NestEgg dengan jeda aman agar tidak terdeteksi spam",
+    Desc = "Touch NestEgg dengan jeda aman 4 detik",
     Value = false,
     Callback = function(Value)
         AutoTouchEgg = Value
@@ -204,7 +203,7 @@ MainTab:Toggle({
 
                         if nestEggsFolder and rootPart then
                             local closestEggPart = nil
-                            local shortestDistance = 20 
+                            local shortestDistance = 18 
 
                             for _, egg in ipairs(nestEggsFolder:GetChildren()) do
                                 local eggPart = egg:IsA("BasePart") and egg or egg:FindFirstChildWhichIsA("BasePart")
@@ -219,13 +218,13 @@ MainTab:Toggle({
 
                             if closestEggPart then
                                 firetouchinterest(rootPart, closestEggPart, 0)
-                                task.wait(0.1)
+                                task.wait(0.15)
                                 firetouchinterest(rootPart, closestEggPart, 1)
                             end
                         end
                     end)
-                    -- Jeda ditingkatkan ke 2 detik agar tidak terbaca sebagai rapid-fire script
-                    task.wait(2)
+                    -- Diperlama jadi 4 detik agar tidak terdeteksi spam packet
+                    task.wait(4)
                 end
             end)
         end
@@ -233,7 +232,7 @@ MainTab:Toggle({
 })
 
 --------------------------------------------------
---// AUTO SPAM LIVE UFO (SAFE INTERVAL)
+--// AUTO SPAM LIVE UFO (REDUCED FREQUENCY)
 --------------------------------------------------
 local AutoSpamUFO = false
 
@@ -251,7 +250,7 @@ end
 
 MainTab:Toggle({
     Title = "Auto Chaos (Live UFO)",
-    Desc = "Spam remote chaos dengan jeda acak aman",
+    Desc = "Spam remote chaos dengan jeda aman",
     Value = false,
     Callback = function(Value)
         AutoSpamUFO = Value
@@ -266,8 +265,8 @@ MainTab:Toggle({
                         pcall(function()
                             ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("SetChickenOrder"):FireServer("chaos")
                         end)
-                        -- Jeda ditingkatkan (3.5 - 5 detik) untuk menghindari rate-limit server kick
-                        task.wait(math.random(35, 50) / 10) 
+                        -- Jeda diperbesar ke 6 - 8 detik untuk hindari spam limit
+                        task.wait(math.random(60, 80) / 10) 
                     else
                         if wasUfoActive then
                             wasUfoActive = false
@@ -275,7 +274,7 @@ MainTab:Toggle({
                                 ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("SetChickenOrder"):FireServer("coop")
                             end)
                         end
-                        task.wait(2) 
+                        task.wait(3) 
                     end
                 end
             end)
@@ -348,7 +347,7 @@ MainTab:Button({
 
         for i = 1, #rawChildren do
             local item = rawChildren[i]
-            if i % 25 == 0 then task.wait(0.05) end
+            if i % 30 == 0 then task.wait(0.1) end
 
             pcall(function()
                 if item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" and item.Visible then
@@ -388,7 +387,7 @@ MainTab:Button({
 
 MainTab:Toggle({
     Title = "Auto Fuse Target Terpilih",
-    Desc = "Menjalankan Fuse otomatis dengan jeda aman",
+    Desc = "Menjalankan Fuse dengan jeda santai",
     Value = false,
     Callback = function(Value)
         AutoFuse = Value
@@ -411,7 +410,7 @@ MainTab:Toggle({
                                         if nameLabel and faceFrame then
                                             local cName = nameLabel.Text
                                             local cRarity = getRarityFromColor(faceFrame.BackgroundColor3)
-                                            local currentCombo = cName .. "-" + cRarity
+                                            local currentCombo = cName .. "-" .. cRarity
 
                                             if currentCombo == SelectedComboTarget then
                                                 table.insert(targetIds, item.Name)
@@ -421,7 +420,7 @@ MainTab:Toggle({
                                 end)
                             end
 
-                            while #targetIds >= 2 and AutoFuse do
+                            if #targetIds >= 2 then
                                 local id1 = table.remove(targetIds, 1)
                                 local id2 = table.remove(targetIds, 1)
 
@@ -429,13 +428,11 @@ MainTab:Toggle({
                                     local args = { id1, id2, {}, [5] = "a" }
                                     ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("FuseChickens"):InvokeServer(unpack(args))
                                 end)
-
-                                -- Jeda ditingkatkan ke 1.2 detik per kali fuse agar server tidak mendeteksinya sebagai spam bot
-                                task.wait(1.2)
                             end
                         end
                     end
-                    task.wait(4)
+                    -- Jeda antar eksekusi fuse diperlambat menjadi 3 detik agar aman
+                    task.wait(3)
                 end
             end)
         end
