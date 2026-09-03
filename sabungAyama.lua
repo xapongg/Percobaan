@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
+--// Safe Anti-AFK (Bypass 20 Menit Tanpa Kick)
 task.spawn(function()
     pcall(function()
         local connections = getconnections or get_signal_cons
@@ -20,7 +21,6 @@ task.spawn(function()
     end)
 end)
 
--- Fallback tambahan jika getconnections tidak didukung oleh executor kamu
 LocalPlayer.Idled:Connect(function()
     local vu = game:GetService("VirtualUser")
     vu:CaptureController()
@@ -41,8 +41,8 @@ local WindUI = loadstring(game:HttpGet(
 
 --// Window
 local Window = WindUI:CreateWindow({
-    Title = "XapVerseHub - Nama Game | v0.0.0.1",
-    Folder = "NamaGame",
+    Title = "XapVerseHub - Sabung Ayam | v0.0.0.1",
+    Folder = "SabungAyamHub",
     Size = UDim2.fromOffset(580, 460),
     MinSize = Vector2.new(560, 350),
     MaxSize = Vector2.new(850, 560),
@@ -58,7 +58,7 @@ local Window = WindUI:CreateWindow({
 
 WindUI:Notify({
     Title = "Welcome",
-    Content = "XapVerse Loaded",
+    Content = "XapVerse Loaded Safely",
     Icon = "rbxassetid://135878568033396",
     Duration = 5,
     CanClose = false,
@@ -68,11 +68,13 @@ pcall(function()
     Window:EditOpenButton({ Enabled = false })
 end)
 
--- Create ScreenGui
+-- Create ScreenGui (Hidden / Safe Name)
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "XapVerseHub_Toggle"
+ScreenGui.Name = "CoreGui_Protection_Toggle"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+pcall(function()
+    ScreenGui.Parent = gethui and gethui() or LocalPlayer:WaitForChild("PlayerGui")
+end)
 
 local ToggleButton = Instance.new("ImageButton")
 ToggleButton.Parent = ScreenGui
@@ -153,9 +155,8 @@ local MainTab = Window:Tab({
 
 MainTab:Select()
 
-
 --------------------------------------------------
---// AUTO CLAIM INCUBATOR (RANDOM 3 - 5 MENIT)
+--// AUTO CLAIM INCUBATOR (SAFE DELAY)
 --------------------------------------------------
 local AutoClaimIncubator = false
 
@@ -172,7 +173,6 @@ MainTab:Toggle({
                     pcall(function()
                         ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("IncubatorClaim"):InvokeServer()
                     end)
-
                     local randomDelay = math.random(180, 300)
                     task.wait(randomDelay)
                 end
@@ -182,13 +182,13 @@ MainTab:Toggle({
 })
 
 --------------------------------------------------
---// AUTO TOUCH NEST EGG (FAST & CLOSEST DETECTOR)
+--// AUTO TOUCH NEST EGG (ANTI-DETECTION DELAY)
 --------------------------------------------------
 local AutoTouchEgg = false
 
 MainTab:Toggle({
-    Title = "Auto Touch Nest Egg (Realtime)",
-    Desc = "Touch NestEgg terdekat secara instan saat telur spawn",
+    Title = "Auto Touch Nest Egg (Safe Mode)",
+    Desc = "Touch NestEgg dengan jeda aman agar tidak terdeteksi spam",
     Value = false,
     Callback = function(Value)
         AutoTouchEgg = Value
@@ -203,7 +203,7 @@ MainTab:Toggle({
 
                         if nestEggsFolder and rootPart then
                             local closestEggPart = nil
-                            local shortestDistance =20 -- Jarak maksimal 15 studs (hanya yang dekat)
+                            local shortestDistance = 20 
 
                             for _, egg in ipairs(nestEggsFolder:GetChildren()) do
                                 local eggPart = egg:IsA("BasePart") and egg or egg:FindFirstChildWhichIsA("BasePart")
@@ -216,17 +216,15 @@ MainTab:Toggle({
                                 end
                             end
 
-                            -- Jika menemukan telur di jarak dekat, langsung sentuh
                             if closestEggPart then
                                 firetouchinterest(rootPart, closestEggPart, 0)
-                                task.wait(0.02)
+                                task.wait(0.1)
                                 firetouchinterest(rootPart, closestEggPart, 1)
                             end
                         end
                     end)
-
-                    -- Jeda mikro (0.1 detik) agar loop berjalan cepat merespon telur spawn tanpa bikin FPS drop
-                    task.wait(1)
+                    -- Jeda ditingkatkan ke 2 detik agar tidak terbaca sebagai rapid-fire script
+                    task.wait(2)
                 end
             end)
         end
@@ -234,32 +232,25 @@ MainTab:Toggle({
 })
 
 --------------------------------------------------
---// AUTO SPAM LIVE UFO (STEALTH + AUTO RESET COOP)
+--// AUTO SPAM LIVE UFO (SAFE INTERVAL)
 --------------------------------------------------
 local AutoSpamUFO = false
 
 local function isLiveUFOActive()
-    local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
-    if not playerGui then return false end
-    local eventChips = playerGui:FindFirstChild("EventChips")
-    if not eventChips then return false end
-    local frame = eventChips:FindFirstChild("Frame")
-    if not frame then return false end
-    local holder = frame:FindFirstChild("holder")
-    if not holder then return false end
-    local liveUfo = holder:FindFirstChild("live-ufo")
-    if not liveUfo then return false end
-
-    local timeLabel = liveUfo:FindFirstChild("time")
-    if timeLabel and liveUfo.Visible then
-        return true
-    end
-    return false
+    local success, result = pcall(function()
+        local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
+        local liveUfo = playerGui.EventChips.Frame.holder["live-ufo"]
+        if liveUfo and liveUfo:FindFirstChild("time") and liveUfo.Visible then
+            return true
+        end
+        return false
+    end)
+    return success and result
 end
 
 MainTab:Toggle({
     Title = "Auto Chaos (Live UFO)",
-    Desc = "Spam remote chaos saat UFO ada, dan set 'coop' 1x saat UFO hilang",
+    Desc = "Spam remote chaos dengan jeda acak aman",
     Value = false,
     Callback = function(Value)
         AutoSpamUFO = Value
@@ -274,7 +265,8 @@ MainTab:Toggle({
                         pcall(function()
                             ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("SetChickenOrder"):FireServer("chaos")
                         end)
-                        task.wait(math.random(21, 35) / 10) 
+                        -- Jeda ditingkatkan (3.5 - 5 detik) untuk menghindari rate-limit server kick
+                        task.wait(math.random(35, 50) / 10) 
                     else
                         if wasUfoActive then
                             wasUfoActive = false
@@ -282,7 +274,7 @@ MainTab:Toggle({
                                 ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("SetChickenOrder"):FireServer("coop")
                             end)
                         end
-                        task.wait(1) 
+                        task.wait(2) 
                     end
                 end
             end)
@@ -291,7 +283,7 @@ MainTab:Toggle({
 })
 
 --------------------------------------------------
---// AUTO FUSE CHICKENS (FIXED PATTERN & NON-KICK)
+--// AUTO FUSE CHICKENS (SAFE BATCH)
 --------------------------------------------------
 local AutoFuse = false
 local SelectedComboTarget = ""
@@ -342,7 +334,7 @@ local FuseDropdown = MainTab:Dropdown({
 
 MainTab:Button({
     Title = "Scan Inventory Ayam",
-    Desc = "Scan aman membaca semua ID ayam (c1, c527, dst.)",
+    Desc = "Scan aman membaca semua ID ayam",
     Callback = function()
         local grid = getChickenGrid()
         if not grid then 
@@ -355,7 +347,7 @@ MainTab:Button({
 
         for i = 1, #rawChildren do
             local item = rawChildren[i]
-            if i % 15 == 0 then task.wait() end
+            if i % 25 == 0 then task.wait(0.05) end
 
             pcall(function()
                 if item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" and item.Visible then
@@ -395,7 +387,7 @@ MainTab:Button({
 
 MainTab:Toggle({
     Title = "Auto Fuse Target Terpilih",
-    Desc = "Menjalankan Fuse otomatis",
+    Desc = "Menjalankan Fuse otomatis dengan jeda aman",
     Value = false,
     Callback = function(Value)
         AutoFuse = Value
@@ -418,7 +410,7 @@ MainTab:Toggle({
                                         if nameLabel and faceFrame then
                                             local cName = nameLabel.Text
                                             local cRarity = getRarityFromColor(faceFrame.BackgroundColor3)
-                                            local currentCombo = cName .. "-" .. cRarity
+                                            local currentCombo = cName .. "-" + cRarity
 
                                             if currentCombo == SelectedComboTarget then
                                                 table.insert(targetIds, item.Name)
@@ -437,11 +429,12 @@ MainTab:Toggle({
                                     ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("FuseChickens"):InvokeServer(unpack(args))
                                 end)
 
-                                task.wait(0.5)
+                                -- Jeda ditingkatkan ke 1.2 detik per kali fuse agar server tidak mendeteksinya sebagai spam bot
+                                task.wait(1.2)
                             end
                         end
                     end
-                    task.wait(2.5)
+                    task.wait(4)
                 end
             end)
         end
