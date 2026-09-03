@@ -2,9 +2,6 @@
 
 --// Services
 local Players = game:GetService("Players")
-local VirtualUser = game:GetService("VirtualUser")
-local VIM = game:GetService("VirtualInputManager")
-local UIS = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
