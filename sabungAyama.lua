@@ -1,9 +1,13 @@
 -- loadstring(game:HttpGet("https://raw.githubusercontent.com/xapongg/Percobaan/refs/heads/main/sabungAyama.lua"))()
 
+if not game:IsLoaded() then game.Loaded:Wait() end
+
 --// Services
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UIS = game:GetService("UserInputService")
 
 --// Safe Anti-AFK (Bypass 20 Menit Tanpa Kick)
 task.spawn(function()
@@ -27,10 +31,7 @@ LocalPlayer.Idled:Connect(function()
     vu:ClickButton2(Vector2.new())
 end)
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UIS = game:GetService("UserInputService")
-
---// Wind UI
+--// Wind UI & Icons
 local Icons = loadstring(game:HttpGetAsync(
     "https://raw.githubusercontent.com/Footagesus/Icons/main/Main-v2.lua"
 ))()
@@ -68,9 +69,9 @@ pcall(function()
     Window:EditOpenButton({ Enabled = false })
 end)
 
--- Create ScreenGui (Hidden / Safe Name)
+--// Open Button Milik Kamu (Ditempatkan di gethui agar aman dari anti-cheat PlayerGui)
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "CoreGui_Protection_Toggle"
+ScreenGui.Name = "XapVerseHub_Toggle"
 ScreenGui.ResetOnSpawn = false
 pcall(function()
     ScreenGui.Parent = gethui and gethui() or LocalPlayer:WaitForChild("PlayerGui")
@@ -223,7 +224,6 @@ MainTab:Toggle({
                             end
                         end
                     end)
-                    -- Diperlama jadi 4 detik agar tidak terdeteksi spam packet
                     task.wait(4)
                 end
             end)
@@ -265,7 +265,6 @@ MainTab:Toggle({
                         pcall(function()
                             ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("SetChickenOrder"):FireServer("chaos")
                         end)
-                        -- Jeda diperbesar ke 6 - 8 detik untuk hindari spam limit
                         task.wait(math.random(60, 80) / 10) 
                     else
                         if wasUfoActive then
@@ -334,7 +333,7 @@ local FuseDropdown = MainTab:Dropdown({
 
 MainTab:Button({
     Title = "Scan Inventory Ayam",
-    Desc = "Scan aman membaca semua ID ayam",
+    Desc = "Scan aman membaca semua ayam berdasarkan Unique ID",
     Callback = function()
         local grid = getChickenGrid()
         if not grid then 
@@ -342,48 +341,57 @@ MainTab:Button({
             return 
         end
 
-        local comboCounts = {}
-        local rawChildren = grid:GetChildren()
+        WindUI:Notify({Title = "Scanning...", Content = "Sedang memindai inventory ayam...", Duration = 2})
 
-        for i = 1, #rawChildren do
-            local item = rawChildren[i]
-            if i % 30 == 0 then task.wait(0.1) end
+        task.spawn(function()
+            local comboCounts = {}
+            local rawChildren = grid:GetChildren()
 
-            pcall(function()
-                if item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" and item.Visible then
-                    local nameLabel = item:FindFirstChild("name") and item.name:FindFirstChild("name")
-                    local faceFrame = item:FindFirstChild("face")
+            for i = 1, #rawChildren do
+                local item = rawChildren[i]
+                -- Beri jeda tiap 35 item agar client tidak lag
+                if i % 35 == 0 then task.wait(0.02) end
 
-                    if nameLabel and faceFrame and nameLabel.Text ~= "" then
-                        local cName = nameLabel.Text
-                        local cRarity = getRarityFromColor(faceFrame.BackgroundColor3)
-                        local comboKey = cName .. "-" .. cRarity
+                pcall(function()
+                    -- Mengecek apakah objek adalah GuiObject dan namanya diawali huruf 'c' (misal c1, c5552)
+                    if item and item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" and item.Visible then
+                        local nameLabel = item:FindFirstChild("name") and item.name:FindFirstChild("name")
+                        local faceFrame = item:FindFirstChild("face")
 
-                        comboCounts[comboKey] = (comboCounts[comboKey] or 0) + 1
+                        if nameLabel and faceFrame and nameLabel.Text ~= "" then
+                            local cName = nameLabel.Text
+                            local cRarity = getRarityFromColor(faceFrame.BackgroundColor3)
+                            
+                            if cRarity ~= "Unknown" then
+                                local comboKey = cName .. "-" .. cRarity
+                                comboCounts[comboKey] = (comboCounts[comboKey] or 0) + 1
+                            end
+                        end
+                    end
+                end)
+            end
+
+            local formattedList = {}
+            for comboKey, count in pairs(comboCounts) do
+                if count >= 2 then
+                    local name, rarity = string.match(comboKey, "^(.-)%-(.+)$")
+                    if name and rarity then
+                        table.insert(formattedList, name .. " [" .. rarity .. "] (" .. count .. ")")
                     end
                 end
-            end)
-        end
-
-        local formattedList = {}
-        for comboKey, count in pairs(comboCounts) do
-            if count >= 2 then
-                local name, rarity = string.match(comboKey, "^(.-)%-(.+)$")
-                if name and rarity then
-                    table.insert(formattedList, name .. " [" .. rarity .. "] (" .. count .. ")")
-                end
             end
-        end
 
-        if #formattedList > 0 then
-            table.sort(formattedList)
-            FuseDropdown:Refresh(formattedList)
-            WindUI:Notify({Title = "Scan Sukses", Content = "Berhasil memuat " .. #formattedList .. " jenis ayam.", Duration = 3})
-        else
-            WindUI:Notify({Title = "Scan Selesai", Content = "Tidak ada pasang ayam yang memenuhi syarat (Min 2).", Duration = 3})
-        end
+            if #formattedList > 0 then
+                table.sort(formattedList)
+                FuseDropdown:Refresh(formattedList)
+                WindUI:Notify({Title = "Scan Sukses", Content = "Berhasil memuat " .. #formattedList .. " jenis ayam kembar.", Duration = 4})
+            else
+                WindUI:Notify({Title = "Scan Selesai", Content = "Tidak ada pasang ayam yang memenuhi syarat (Min 2).", Duration = 3})
+            end
+        end)
     end
 })
+
 
 MainTab:Toggle({
     Title = "Auto Fuse Target Terpilih",
@@ -431,11 +439,9 @@ MainTab:Toggle({
                             end
                         end
                     end
-                    -- Jeda antar eksekusi fuse diperlambat menjadi 3 detik agar aman
                     task.wait(3)
                 end
             end)
         end
     end
 })
-
