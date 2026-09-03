@@ -12,7 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 --------------------------------------------------
 --// AUTO ANTI AFK (BUILT-IN TEMPLATE)
 --------------------------------------------------
-local AntiAFK_Enabled = true
+local AntiAFK_Enabled = false
 local IdleConn
 
 if AntiAFK_Enabled then
