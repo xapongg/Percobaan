@@ -254,37 +254,6 @@ MainTab:Button({
 })
 
 
---------------------------------------------------
---// Rarity Colors & Helper Functions
---------------------------------------------------
-local RarityColors = {
-    ["Common"]    = Color3.fromRGB(118, 142, 176), 
-    ["Uncommon"]  = Color3.fromRGB(95, 190, 78),     
-    ["Rare"]      = Color3.fromRGB(0, 168, 255),     
-    ["Epic"]      = Color3.fromRGB(128, 0, 128),   
-    ["Legendary"] = Color3.fromRGB(255, 165, 0)    
-}
-
-local function getRarityFromColor(color)
-    for rarityName, rarityColor in pairs(RarityColors) do
-        local diffR = math.abs(color.R - rarityColor.R)
-        local diffG = math.abs(color.G - rarityColor.G)
-        local diffB = math.abs(color.B - rarityColor.B)
-        
-        if diffR < 0.05 and diffG < 0.05 and diffB < 0.05 then
-            return rarityName
-        end
-    end
-    return "Common"
-end
-
-local function getChickenScrollingFrame()
-    local success, result = pcall(function()
-        return LocalPlayer.PlayerGui.Collection.Flock.ChickenHolder.ScrollingFrame
-    end)
-    if success and result then return result end
-    return nil
-end
 
 --------------------------------------------------
 --// AUTO CLAIM INCUBATOR
