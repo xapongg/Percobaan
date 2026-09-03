@@ -425,7 +425,7 @@ local FuseDropdown = MainTab:Dropdown({
 })
 
 --------------------------------------------------
---// FUNGSI MENDAPATKAN GRID / SCROLLING FRAME AYAM
+--// FUNGSI MENDAPATKAN SCROLLING FRAME AYAM
 --------------------------------------------------
 local function getChickenScrollingFrame()
     local success, result = pcall(function()
@@ -436,7 +436,7 @@ local function getChickenScrollingFrame()
 end
 
 --------------------------------------------------
---// SCAN INVENTORY AYAM (PATH BARU)
+--// SCAN INVENTORY AYAM (FIXED PATH & RARITY)
 --------------------------------------------------
 MainTab:Button({
     Title = "Scan Inventory Ayam",
@@ -459,15 +459,18 @@ MainTab:Button({
                 if i % 30 == 0 then task.wait(0.02) end
 
                 pcall(function()
-                    -- Memastikan itu adalah objek GUI dan memiliki 'ChickenName'
                     if item and item:IsA("GuiObject") then
                         local nameLabel = item:FindFirstChild("ChickenName")
-                        local faceFrame = item:FindFirstChild("face") -- Sesuaikan jika nama frame muka berbeda di path baru
+                        -- Mencari frame warna rarity di dalam item (biasanya bernama 'face' atau background frame)
+                        local faceFrame = item:FindFirstChild("face") or item:FindFirstChild("Background") or item:FindFirstChild("Main")
 
                         if nameLabel and nameLabel:IsA("TextLabel") and nameLabel.Text ~= "" then
                             local cName = nameLabel.Text
-                            -- Jika faceFrame tidak ditemukan, kita fallback ke warna default atau ambil dari properti lain jika ada
-                            local cRarity = faceFrame and getRarityFromColor(faceFrame.BackgroundColor3) or "Common"
+                            local cRarity = "Common" -- Default fallback
+
+                            if faceFrame and faceFrame:IsA("GuiObject") then
+                                cRarity = getRarityFromColor(faceFrame.BackgroundColor3)
+                            end
                             
                             local comboKey = cName .. "-" .. cRarity
                             comboCounts[comboKey] = (comboCounts[comboKey] or 0) + 1
@@ -498,11 +501,11 @@ MainTab:Button({
 })
 
 --------------------------------------------------
---// AUTO FUSE TARGET TERPILIH (PATH BARU)
+--// AUTO FUSE TARGET TERPILIH (FIXED LOOP & TRIGGER)
 --------------------------------------------------
 MainTab:Toggle({
     Title = "Auto Fuse Target Terpilih",
-    Desc = "Menjalankan Fuse dengan path inventory baru",
+    Desc = "Menjalankan Fuse otomatis",
     Value = false,
     Callback = function(Value)
         AutoFuse = Value
@@ -510,7 +513,7 @@ MainTab:Toggle({
         if AutoFuse then
             task.spawn(function()
                 while AutoFuse do
-                    if SelectedComboTarget ~= "" then
+                    if SelectedComboTarget ~= "" and SelectedComboTarget ~= "(Klik Scan Dulu)" then
                         local scrollingFrame = getChickenScrollingFrame()
                         
                         if scrollingFrame then
@@ -520,15 +523,19 @@ MainTab:Toggle({
                                 pcall(function()
                                     if item and item:IsA("GuiObject") then
                                         local nameLabel = item:FindFirstChild("ChickenName")
-                                        local faceFrame = item:FindFirstChild("face")
+                                        local faceFrame = item:FindFirstChild("face") or item:FindFirstChild("Background") or item:FindFirstChild("Main")
 
                                         if nameLabel and nameLabel:IsA("TextLabel") then
                                             local cName = nameLabel.Text
-                                            local cRarity = faceFrame and getRarityFromColor(faceFrame.BackgroundColor3) or "Common"
+                                            local cRarity = "Common"
+                                            if faceFrame and faceFrame:IsA("GuiObject") then
+                                                cRarity = getRarityFromColor(faceFrame.BackgroundColor3)
+                                            end
+                                            
                                             local currentCombo = cName .. "-" .. cRarity
 
                                             if currentCombo == SelectedComboTarget then
-                                                -- Nama objek (misal 'c13') digunakan sebagai ID untuk remote fuse
+                                                -- Mengambil ID unik dari nama objek (misal 'c13')
                                                 table.insert(targetIds, item.Name)
                                             end
                                         end
@@ -536,21 +543,24 @@ MainTab:Toggle({
                                 end)
                             end
 
+                            -- Eksekusi fuse jika ditemukan minimal 2 ayam yang cocok
                             if #targetIds >= 2 then
-                                local id1 = table.remove(targetIds, 1)
-                                local id2 = table.remove(targetIds, 1)
+                                local id1 = targetIds[1]
+                                local id2 = targetIds[2]
 
                                 pcall(function()
                                     local args = { id1, id2, {}, [5] = "a" }
                                     ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("FuseChickens"):InvokeServer(unpack(args))
                                 end)
+                                
+                                -- Jeda agar animasi/request server sempat memproses
+                                task.wait(1.5)
                             end
                         end
                     end
-                    task.wait(3)
+                    task.wait(2)
                 end
             end)
         end
     end
 })
-
