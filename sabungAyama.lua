@@ -1,4 +1,5 @@
 -- loadstring(game:HttpGet("https://raw.githubusercontent.com/xapongg/Percobaan/refs/heads/main/sabungAyama.lua"))()
+-- baru nih
 
 --// Services
 local Players = game:GetService("Players")
