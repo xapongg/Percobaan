@@ -9,31 +9,6 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
---------------------------------------------------
---// AUTO ANTI AFK (BUILT-IN TEMPLATE)
---------------------------------------------------
-local AntiAFK_Enabled = false
-local IdleConn
-
-if AntiAFK_Enabled then
-    IdleConn = LocalPlayer.Idled:Connect(function()
-        VirtualUser:Button2Down(Vector2.new(0,0), Camera.CFrame)
-        task.wait(0.2)
-        VirtualUser:Button2Up(Vector2.new(0,0), Camera.CFrame)
-    end)
-
-    task.spawn(function()
-        while AntiAFK_Enabled do
-            task.wait(60) 
-            pcall(function()
-                VIM:SendKeyEvent(true, Enum.KeyCode.Unknown, false, game)
-                task.wait(0.05)
-                VIM:SendKeyEvent(false, Enum.KeyCode.Unknown, false, game)
-            end)
-        end
-    end)
-end
-
 --// Wind UI
 local Icons = loadstring(game:HttpGetAsync(
     "https://raw.githubusercontent.com/Footagesus/Icons/main/Main-v2.lua"
