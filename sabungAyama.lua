@@ -1,5 +1,3 @@
--- loadstring(game:HttpGet("https://raw.githubusercontent.com/xapongg/Percobaan/refs/heads/main/sabungAyama.lua"))()
-
 if not game:IsLoaded() then game.Loaded:Wait() end
 
 --// Services
@@ -59,7 +57,7 @@ local Window = WindUI:CreateWindow({
 
 WindUI:Notify({
     Title = "Welcome",
-    Content = "XapVerse Loaded Safely",
+    Content = "XapVerse Loaded Safely (Auto-Scan & Multi-Fuse)",
     Icon = "rbxassetid://135878568033396",
     Duration = 5,
     CanClose = false,
@@ -69,7 +67,7 @@ pcall(function()
     Window:EditOpenButton({ Enabled = false })
 end)
 
---// Open Button Milik Kamu (Ditempatkan di gethui agar aman dari anti-cheat PlayerGui)
+--// Open Button Milik Kamu (Aman di gethui)
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "XapVerseHub_Toggle"
 ScreenGui.ResetOnSpawn = false
@@ -157,107 +155,39 @@ local MainTab = Window:Tab({
 MainTab:Select()
 
 --------------------------------------------------
---// AUTO TWEEN SCRAP & REBIRTH (PERFECT HEIGHT & SPEED)
+--// Rarity Colors & Helper Functions
 --------------------------------------------------
-local TweenService = game:GetService("TweenService")
-local AutoScrapTween = false
+local RarityColors = {
+    ["Common"]    = Color3.fromRGB(118, 142, 176), 
+    ["Uncommon"]  = Color3.fromRGB(95, 190, 78),     
+    ["Rare"]      = Color3.fromRGB(0, 168, 255),     
+    ["Epic"]      = Color3.fromRGB(128, 0, 128),   
+    ["Legendary"] = Color3.fromRGB(255, 165, 0)    
+}
 
-MainTab:Button({
-    Title = "Start Scrap & Rebirth Tween",
-    Desc = "Tween pas di atas lantai (ga tenggelam) & kecepatan aman",
-    Callback = function()
-        if AutoScrapTween then return end 
-        AutoScrapTween = true
-
-        task.spawn(function()
-            local character = LocalPlayer.Character
-            local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-            local humanoid = character and character:FindFirstChildWhichIsA("Humanoid")
-            
-            if not rootPart or not humanoid then
-                WindUI:Notify({Title = "Error", Content = "Karakter tidak ditemukan!", Duration = 3})
-                AutoScrapTween = false
-                return
-            end
-
-            -- Kecepatan aman anti-kick (disesuaikan agar server tidak memutus koneksi)
-            local tweenSpeed = 28 
-
-            -- Tinggi offset kaki berdiri (HipHeight + setengah ukuran RootPart)
-            local heightOffset = Vector3.new(0, humanoid.HipHeight + (rootPart.Size.Y / 2), 0)
-
-            -- Helper Tween: Mengunci posisi agar tegak & pas di permukaan tanah
-            local function tweenTo(targetPosition)
-                -- Tambahkan offset tinggi agar karakter berdiri tepat di atas target
-                local adjustedPos = targetPosition + heightOffset
-                local currentYaw = math.rad(rootPart.Orientation.Y)
-                local uprightCFrame = CFrame.new(adjustedPos) * CFrame.Angles(0, currentYaw, 0)
-
-                local distance = (rootPart.Position - adjustedPos).Magnitude
-                local tweenTime = distance / tweenSpeed
-                local tweenInfo = TweenInfo.new(tweenTime, Enum.EasingStyle.Linear)
-                
-                local tween = TweenService:Create(rootPart, tweenInfo, {CFrame = uprightCFrame})
-                tween:Play()
-                return tween
-            end
-
-            -- 1. Tween ke semua workspace.PitScrap.Loose
-            local pitScrap = workspace:FindFirstChild("PitScrap")
-            if pitScrap then
-                for _, looseItem in ipairs(pitScrap:GetChildren()) do
-                    if looseItem.Name == "Loose" and AutoScrapTween then
-                        local targetPart = looseItem:IsA("BasePart") and looseItem or looseItem:FindFirstChildWhichIsA("BasePart")
-                        if targetPart then
-                            local tw = tweenTo(targetPart.Position)
-                            tw.Completed:Wait()
-                            task.wait(0.05)
-                        end
-                    end
-                end
-            end
-
-            -- 2. Tween ke Recycler1 + Fire Rebirth instan 10 studs sebelum sampai
-            local recyclers = workspace:FindFirstChild("Recyclers")
-            local recycler1 = recyclers and recyclers:FindFirstChild("Recycler1")
-            
-            if recycler1 then
-                local targetPart = recycler1:IsA("BasePart") and recycler1 or recycler1:FindFirstChildWhichIsA("BasePart")
-                if targetPart then
-                    local targetPos = targetPart.Position
-                    local startPos = rootPart.Position
-                    
-                    local direction = (targetPos - startPos).Unit
-                    local totalDistance = (targetPos - startPos).Magnitude
-                    local stopDistance = math.max(0, totalDistance - 10)
-                    local positionBeforeRecycler = startPos + (direction * stopDistance)
-
-                    -- Phase 1: Tween ke titik 10 studs dari Recycler
-                    local tw1 = tweenTo(positionBeforeRecycler)
-                    tw1.Completed:Wait()
-
-                    -- Fire Rebirth INSTAN tanpa jeda
-                    task.spawn(function()
-                        pcall(function()
-                            ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Rebirth"):InvokeServer()
-                        end)
-                    end)
-                    WindUI:Notify({Title = "Rebirth", Content = "Rebirth Fired on Timing!", Duration = 2})
-
-                    -- Phase 2: Langsung sambung ke target Recycler1
-                    local tw2 = tweenTo(targetPos)
-                    tw2.Completed:Wait()
-                end
-            end
-
-            AutoScrapTween = false
-        end)
+local function getRarityFromColor(color)
+    for rarityName, rarityColor in pairs(RarityColors) do
+        local diffR = math.abs(color.R - rarityColor.R)
+        local diffG = math.abs(color.G - rarityColor.G)
+        local diffB = math.abs(color.B - rarityColor.B)
+        
+        if diffR < 0.05 and diffG < 0.05 and diffB < 0.05 then
+            return rarityName
+        end
     end
-})
+    return "Common"
+end
 
+local function getChickenScrollingFrame()
+    local success, result = pcall(function()
+        return LocalPlayer.PlayerGui.Collection.Flock.ChickenHolder.ScrollingFrame
+    end)
+    if success and result then return result end
+    return nil
+end
 
 --------------------------------------------------
---// AUTO CLAIM INCUBATOR (SAFE RANDOM 4-7 MENIT)
+--// AUTO CLAIM INCUBATOR
 --------------------------------------------------
 local AutoClaimIncubator = false
 
@@ -267,15 +197,13 @@ MainTab:Toggle({
     Value = false,
     Callback = function(Value)
         AutoClaimIncubator = Value
-
         if AutoClaimIncubator then
             task.spawn(function()
                 while AutoClaimIncubator do
                     pcall(function()
                         ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("IncubatorClaim"):InvokeServer()
                     end)
-                    local randomDelay = math.random(240, 420)
-                    task.wait(randomDelay)
+                    task.wait(math.random(240, 420))
                 end
             end)
         end
@@ -283,7 +211,7 @@ MainTab:Toggle({
 })
 
 --------------------------------------------------
---// AUTO TOUCH NEST EGG (SLOW & STABLE)
+--// AUTO TOUCH NEST EGG
 --------------------------------------------------
 local AutoTouchEgg = false
 
@@ -293,7 +221,6 @@ MainTab:Toggle({
     Value = false,
     Callback = function(Value)
         AutoTouchEgg = Value
-
         if AutoTouchEgg then
             task.spawn(function()
                 while AutoTouchEgg do
@@ -332,7 +259,7 @@ MainTab:Toggle({
 })
 
 --------------------------------------------------
---// AUTO SPAM LIVE UFO (REDUCED FREQUENCY)
+--// AUTO SPAM LIVE UFO
 --------------------------------------------------
 local AutoSpamUFO = false
 
@@ -354,11 +281,9 @@ MainTab:Toggle({
     Value = false,
     Callback = function(Value)
         AutoSpamUFO = Value
-
         if AutoSpamUFO then
             task.spawn(function()
                 local wasUfoActive = false
-
                 while AutoSpamUFO do
                     if isLiveUFOActive() then
                         wasUfoActive = true
@@ -382,38 +307,16 @@ MainTab:Toggle({
 })
 
 --------------------------------------------------
---// AUTO FUSE CHICKENS (SAFE BATCH)
+--// AUTO FUSE CHICKENS (AUTO-SCAN & MULTI-PAIR FUSE)
 --------------------------------------------------
 local AutoFuse = false
 local SelectedComboTarget = ""
 
-local RarityColors = {
-    ["Common"]    = Color3.fromRGB(118, 142, 176), 
-    ["Uncommon"]  = Color3.fromRGB(95, 190, 78),     
-    ["Rare"]      = Color3.fromRGB(0, 168, 255),     
-    ["Epic"]      = Color3.fromRGB(128, 0, 128),   
-    ["Legendary"] = Color3.fromRGB(255, 165, 0)    
-}
-
-local function getRarityFromColor(color)
-    for rarityName, rarityColor in pairs(RarityColors) do
-        local diffR = math.abs(color.R - rarityColor.R)
-        local diffG = math.abs(color.G - rarityColor.G)
-        local diffB = math.abs(color.B - rarityColor.B)
-        
-        if diffR < 0.05 and diffG < 0.05 and diffB < 0.05 then
-            return rarityName
-        end
-    end
-    return "Unknown"
-end
-
-
 local FuseDropdown = MainTab:Dropdown({
     Title = "Pilih Target Fuse",
-    Desc = "Format: Nama [Rarity] (Jumlah)",
-    Values = {"(Klik Scan Dulu)"},
-    Value = "(Klik Scan Dulu)",
+    Desc = "Otomatis memperbarui daftar ayam kembar",
+    Values = {"(Menunggu Scan Otomatis...)"},
+    Value = "(Menunggu Scan Otomatis...)",
     Callback = function(Value)
         local name, rarity = string.match(Value, "^(.-)%s*%[(.-)%]")
         if name and rarity then
@@ -424,88 +327,60 @@ local FuseDropdown = MainTab:Dropdown({
     end
 })
 
---------------------------------------------------
---// FUNGSI MENDAPATKAN SCROLLING FRAME AYAM
---------------------------------------------------
-local function getChickenScrollingFrame()
-    local success, result = pcall(function()
-        return LocalPlayer.PlayerGui.Collection.Flock.ChickenHolder.ScrollingFrame
-    end)
-    if success and result then return result end
-    return nil
-end
+-- Background Auto-Scanner Task
+task.spawn(function()
+    while true do
+        pcall(function()
+            local scrollingFrame = getChickenScrollingFrame()
+            if scrollingFrame then
+                local comboCounts = {}
+                local rawChildren = scrollingFrame:GetChildren()
 
---------------------------------------------------
---// SCAN INVENTORY AYAM (FIXED PATH & RARITY)
---------------------------------------------------
-MainTab:Button({
-    Title = "Scan Inventory Ayam",
-    Desc = "Scan aman membaca ayam dari Flock ChickenHolder",
-    Callback = function()
-        local scrollingFrame = getChickenScrollingFrame()
-        if not scrollingFrame then 
-            WindUI:Notify({Title = "Error", Content = "Buka menu Collection/Flock di game dulu!", Duration = 3})
-            return 
-        end
+                for _, item in ipairs(rawChildren) do
+                    pcall(function()
+                        if item and item:IsA("GuiObject") then
+                            local nameLabel = item:FindFirstChild("ChickenName")
+                            local faceFrame = item:FindFirstChild("face") or item:FindFirstChild("Background")
 
-        WindUI:Notify({Title = "Scanning...", Content = "Sedang memindai inventory ayam...", Duration = 2})
-
-        task.spawn(function()
-            local comboCounts = {}
-            local rawChildren = scrollingFrame:GetChildren()
-
-            for i = 1, #rawChildren do
-                local item = rawChildren[i]
-                if i % 30 == 0 then task.wait(0.02) end
-
-                pcall(function()
-                    if item and item:IsA("GuiObject") then
-                        local nameLabel = item:FindFirstChild("ChickenName")
-                        -- Mencari frame warna rarity di dalam item (biasanya bernama 'face' atau background frame)
-                        local faceFrame = item:FindFirstChild("face") or item:FindFirstChild("Background") or item:FindFirstChild("Main")
-
-                        if nameLabel and nameLabel:IsA("TextLabel") and nameLabel.Text ~= "" then
-                            local cName = nameLabel.Text
-                            local cRarity = "Common" -- Default fallback
-
-                            if faceFrame and faceFrame:IsA("GuiObject") then
-                                cRarity = getRarityFromColor(faceFrame.BackgroundColor3)
+                            if nameLabel and nameLabel:IsA("TextLabel") and nameLabel.Text ~= "" then
+                                local cName = nameLabel.Text
+                                local cRarity = "Common"
+                                if faceFrame then
+                                    cRarity = getRarityFromColor(faceFrame.BackgroundColor3)
+                                end
+                                
+                                local comboKey = cName .. "-" .. cRarity
+                                comboCounts[comboKey] = (comboCounts[comboKey] or 0) + 1
                             end
-                            
-                            local comboKey = cName .. "-" .. cRarity
-                            comboCounts[comboKey] = (comboCounts[comboKey] or 0) + 1
+                        end
+                    end)
+                end
+
+                local formattedList = {}
+                for comboKey, count in pairs(comboCounts) do
+                    if count >= 2 then
+                        local name, rarity = string.match(comboKey, "^(.-)%-(.+)$")
+                        if name and rarity then
+                            table.insert(formattedList, name .. " [" .. rarity .. "] (" .. count .. ")")
                         end
                     end
-                end)
-            end
+                end
 
-            local formattedList = {}
-            for comboKey, count in pairs(comboCounts) do
-                if count >= 2 then
-                    local name, rarity = string.match(comboKey, "^(.-)%-(.+)$")
-                    if name and rarity then
-                        table.insert(formattedList, name .. " [" .. rarity .. "] (" .. count .. ")")
-                    end
+                if #formattedList > 0 then
+                    table.sort(formattedList)
+                    FuseDropdown:Refresh(formattedList)
+                else
+                    FuseDropdown:Refresh({"(Tidak ada ayam kembar)"})
                 end
             end
-
-            if #formattedList > 0 then
-                table.sort(formattedList)
-                FuseDropdown:Refresh(formattedList)
-                WindUI:Notify({Title = "Scan Sukses", Content = "Berhasil memuat " .. #formattedList .. " jenis ayam kembar.", Duration = 4})
-            else
-                WindUI:Notify({Title = "Scan Selesai", Content = "Tidak ada pasang ayam yang memenuhi syarat (Min 2).", Duration = 3})
-            end
         end)
+        task.wait(5)
     end
-})
+end)
 
---------------------------------------------------
---// AUTO FUSE TARGET TERPILIH (SIMPLIFIED & FIXED)
---------------------------------------------------
 MainTab:Toggle({
     Title = "Auto Fuse Target Terpilih",
-    Desc = "Menjalankan Fuse otomatis",
+    Desc = "Otomatis fuse bergantian semua ID ayam kembar yang terpilih",
     Value = false,
     Callback = function(Value)
         AutoFuse = Value
@@ -513,13 +388,13 @@ MainTab:Toggle({
         if AutoFuse then
             task.spawn(function()
                 while AutoFuse do
-                    if SelectedComboTarget ~= "" and SelectedComboTarget ~= "(Klik Scan Dulu)" then
+                    if SelectedComboTarget ~= "" and SelectedComboTarget ~= "(Menunggu Scan Otomatis...)" and SelectedComboTarget ~= "(Tidak ada ayam kembar)" then
                         local scrollingFrame = getChickenScrollingFrame()
                         
                         if scrollingFrame then
                             local targetIds = {}
 
-                            -- Loop semua ayam di ScrollingFrame
+                            -- Kumpulkan SEMUA ID ayam yang cocok saat ini
                             for _, item in ipairs(scrollingFrame:GetChildren()) do
                                 pcall(function()
                                     local nameLabel = item:FindFirstChild("ChickenName")
@@ -534,7 +409,6 @@ MainTab:Toggle({
                                         
                                         local currentCombo = cName .. "-" .. cRarity
 
-                                        -- Jika cocok dengan target dropdown, masukkan ID-nya (item.Name / misal c13)
                                         if currentCombo == SelectedComboTarget then
                                             table.insert(targetIds, item.Name)
                                         end
@@ -542,7 +416,7 @@ MainTab:Toggle({
                                 end)
                             end
 
-                            -- Jika ada minimal 2 ayam yang cocok, jalankan remote fuse
+                            -- Jika ada minimal 2 ayam, ambil 2 ID terdepan untuk difuse, lalu ulangi terus sampai habis
                             if #targetIds >= 2 then
                                 local id1 = targetIds[1]
                                 local id2 = targetIds[2]
@@ -554,23 +428,22 @@ MainTab:Toggle({
                                     [5] = "a"
                                 }
 
-                                local success, err = pcall(function()
+                                pcall(function()
                                     ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("FuseChickens"):InvokeServer(unpack(args))
                                 end)
                                 
-                                if success then
-                                    print("[Auto Fuse] Berhasil fuse:", id1, "dan", id2)
-                                else
-                                    warn("[Auto Fuse] Gagal:", err)
-                                end
-                                
-                                task.wait(1.5) -- Jeda antar fusi agar server tidak menolak
+                                -- Jeda singkat agar server memproses fusi sebelum pasang berikutnya ditarik
+                                task.wait(1.5)
+                            else
+                                -- Jika sisa ayam kurang dari 2, tunggu sebentar sebelum scan ulang
+                                task.wait(3)
                             end
                         end
                     end
-                    task.wait(2)
+                    task.wait(1)
                 end
             end)
         end
     end
 })
+
