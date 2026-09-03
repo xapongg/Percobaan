@@ -408,13 +408,6 @@ local function getRarityFromColor(color)
     return "Unknown"
 end
 
-local function getChickenGrid()
-    local success, result = pcall(function()
-        return LocalPlayer.PlayerGui.Collection.Frame.main.panel.face.content.content.right.panel.face.content.inner.grid
-    end)
-    if success and result then return result end
-    return nil
-end
 
 local FuseDropdown = MainTab:Dropdown({
     Title = "Pilih Target Fuse",
@@ -431,13 +424,27 @@ local FuseDropdown = MainTab:Dropdown({
     end
 })
 
+--------------------------------------------------
+--// FUNGSI MENDAPATKAN GRID / SCROLLING FRAME AYAM
+--------------------------------------------------
+local function getChickenScrollingFrame()
+    local success, result = pcall(function()
+        return LocalPlayer.PlayerGui.Collection.Flock.ChickenHolder.ScrollingFrame
+    end)
+    if success and result then return result end
+    return nil
+end
+
+--------------------------------------------------
+--// SCAN INVENTORY AYAM (PATH BARU)
+--------------------------------------------------
 MainTab:Button({
     Title = "Scan Inventory Ayam",
-    Desc = "Scan aman membaca semua ayam berdasarkan Unique ID",
+    Desc = "Scan aman membaca ayam dari Flock ChickenHolder",
     Callback = function()
-        local grid = getChickenGrid()
-        if not grid then 
-            WindUI:Notify({Title = "Error", Content = "Buka menu Collection/Inventory di game dulu!", Duration = 3})
+        local scrollingFrame = getChickenScrollingFrame()
+        if not scrollingFrame then 
+            WindUI:Notify({Title = "Error", Content = "Buka menu Collection/Flock di game dulu!", Duration = 3})
             return 
         end
 
@@ -445,27 +452,25 @@ MainTab:Button({
 
         task.spawn(function()
             local comboCounts = {}
-            local rawChildren = grid:GetChildren()
+            local rawChildren = scrollingFrame:GetChildren()
 
             for i = 1, #rawChildren do
                 local item = rawChildren[i]
-                -- Beri jeda tiap 35 item agar client tidak lag
-                if i % 35 == 0 then task.wait(0.02) end
+                if i % 30 == 0 then task.wait(0.02) end
 
                 pcall(function()
-                    -- Mengecek apakah objek adalah GuiObject dan namanya diawali huruf 'c' (misal c1, c5552)
-                    if item and item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" and item.Visible then
-                        local nameLabel = item:FindFirstChild("name") and item.name:FindFirstChild("name")
-                        local faceFrame = item:FindFirstChild("face")
+                    -- Memastikan itu adalah objek GUI dan memiliki 'ChickenName'
+                    if item and item:IsA("GuiObject") then
+                        local nameLabel = item:FindFirstChild("ChickenName")
+                        local faceFrame = item:FindFirstChild("face") -- Sesuaikan jika nama frame muka berbeda di path baru
 
-                        if nameLabel and faceFrame and nameLabel.Text ~= "" then
+                        if nameLabel and nameLabel:IsA("TextLabel") and nameLabel.Text ~= "" then
                             local cName = nameLabel.Text
-                            local cRarity = getRarityFromColor(faceFrame.BackgroundColor3)
+                            -- Jika faceFrame tidak ditemukan, kita fallback ke warna default atau ambil dari properti lain jika ada
+                            local cRarity = faceFrame and getRarityFromColor(faceFrame.BackgroundColor3) or "Common"
                             
-                            if cRarity ~= "Unknown" then
-                                local comboKey = cName .. "-" .. cRarity
-                                comboCounts[comboKey] = (comboCounts[comboKey] or 0) + 1
-                            end
+                            local comboKey = cName .. "-" .. cRarity
+                            comboCounts[comboKey] = (comboCounts[comboKey] or 0) + 1
                         end
                     end
                 end)
@@ -492,10 +497,12 @@ MainTab:Button({
     end
 })
 
-
+--------------------------------------------------
+--// AUTO FUSE TARGET TERPILIH (PATH BARU)
+--------------------------------------------------
 MainTab:Toggle({
     Title = "Auto Fuse Target Terpilih",
-    Desc = "Menjalankan Fuse dengan jeda santai",
+    Desc = "Menjalankan Fuse dengan path inventory baru",
     Value = false,
     Callback = function(Value)
         AutoFuse = Value
@@ -504,23 +511,24 @@ MainTab:Toggle({
             task.spawn(function()
                 while AutoFuse do
                     if SelectedComboTarget ~= "" then
-                        local grid = getChickenGrid()
+                        local scrollingFrame = getChickenScrollingFrame()
                         
-                        if grid then
+                        if scrollingFrame then
                             local targetIds = {}
 
-                            for _, item in ipairs(grid:GetChildren()) do
+                            for _, item in ipairs(scrollingFrame:GetChildren()) do
                                 pcall(function()
-                                    if item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" then
-                                        local nameLabel = item:FindFirstChild("name") and item.name:FindFirstChild("name")
+                                    if item and item:IsA("GuiObject") then
+                                        local nameLabel = item:FindFirstChild("ChickenName")
                                         local faceFrame = item:FindFirstChild("face")
 
-                                        if nameLabel and faceFrame then
+                                        if nameLabel and nameLabel:IsA("TextLabel") then
                                             local cName = nameLabel.Text
-                                            local cRarity = getRarityFromColor(faceFrame.BackgroundColor3)
+                                            local cRarity = faceFrame and getRarityFromColor(faceFrame.BackgroundColor3) or "Common"
                                             local currentCombo = cName .. "-" .. cRarity
 
                                             if currentCombo == SelectedComboTarget then
+                                                -- Nama objek (misal 'c13') digunakan sebagai ID untuk remote fuse
                                                 table.insert(targetIds, item.Name)
                                             end
                                         end
@@ -545,3 +553,4 @@ MainTab:Toggle({
         end
     end
 })
+
