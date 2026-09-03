@@ -1,11 +1,9 @@
--- loadstring(game:HttpGet("https://raw.githubusercontent.com/xapongg/Percobaan/refs/heads/main/sabungAyam.lua"))()
+-- loadstring(game:HttpGet("https://raw.githubusercontent.com/xapongg/Percobaan/refs/heads/main/sabungAyama.lua"))()
 
 --// Services
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
 
 task.spawn(function()
     pcall(function()
@@ -29,6 +27,7 @@ LocalPlayer.Idled:Connect(function()
     vu:ClickButton2(Vector2.new())
 end)
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 --// Wind UI
 local Icons = loadstring(game:HttpGetAsync(
