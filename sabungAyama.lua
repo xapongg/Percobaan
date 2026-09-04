@@ -38,7 +38,7 @@ local WindUI = loadstring(game:HttpGet(
     "https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"
 ))()
 
---// Window
+--// Window Setup (Protected Parent)
 local Window = WindUI:CreateWindow({
     Title = "XapVerseHub - Sabung Ayam | v0.0.0.1",
     Folder = "SabungAyamHub",
@@ -55,9 +55,17 @@ local Window = WindUI:CreateWindow({
     ScrollBarEnabled = false,
 })
 
+-- Sembunyikan WindUI dari PlayerGui menggunakan gethui agar aman dari deteksi game
+pcall(function()
+    if gethui then
+        -- Jika window WindUI mendukung pemindahan parent secara langsung
+        Window:SetParent(gethui())
+    end
+end)
+
 WindUI:Notify({
     Title = "Welcome",
-    Content = "XapVerse Loaded Safely (Auto-Scan & Multi-Fuse)",
+    Content = "XapVerse Loaded Securely",
     Icon = "rbxassetid://135878568033396",
     Duration = 5,
     CanClose = false,
@@ -67,13 +75,26 @@ pcall(function()
     Window:EditOpenButton({ Enabled = false })
 end)
 
---// Open Button Milik Kamu (Aman di gethui)
+--// Open Button Milik Kamu (Disembunyikan ke gethui / CoreGui agar tidak terdeteksi anti-cheat)
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "XapVerseHub_Toggle"
+-- Menyamarkan nama ScreenGui agar terlihat seperti elemen bawaan Roblox
+ScreenGui.Name = "CoreGui_Protected_Button"
 ScreenGui.ResetOnSpawn = false
-pcall(function()
-    ScreenGui.Parent = gethui and gethui() or LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.IgnoreGuiInset = true
+
+-- Proteksi Utama: Masuk ke gethui() executor atau CoreGui, mutlak di luar jangkauan PlayerGui game
+local successParent = pcall(function()
+    if gethui then
+        ScreenGui.Parent = gethui()
+    else
+        ScreenGui.Parent = game:GetService("CoreGui")
+    end
 end)
+
+if not successParent then
+    -- Fallback terakhir jika executor tidak mendukung keduanya
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
 
 local ToggleButton = Instance.new("ImageButton")
 ToggleButton.Parent = ScreenGui
@@ -178,15 +199,10 @@ MainTab:Button({
                 return
             end
 
-            -- Kecepatan aman anti-kick (disesuaikan agar server tidak memutus koneksi)
             local tweenSpeed = 28 
-
-            -- Tinggi offset kaki berdiri (HipHeight + setengah ukuran RootPart)
             local heightOffset = Vector3.new(0, humanoid.HipHeight + (rootPart.Size.Y / 2), 0)
 
-            -- Helper Tween: Mengunci posisi agar tegak & pas di permukaan tanah
             local function tweenTo(targetPosition)
-                -- Tambahkan offset tinggi agar karakter berdiri tepat di atas target
                 local adjustedPos = targetPosition + heightOffset
                 local currentYaw = math.rad(rootPart.Orientation.Y)
                 local uprightCFrame = CFrame.new(adjustedPos) * CFrame.Angles(0, currentYaw, 0)
@@ -200,7 +216,6 @@ MainTab:Button({
                 return tween
             end
 
-            -- 1. Tween ke semua workspace.PitScrap.Loose
             local pitScrap = workspace:FindFirstChild("PitScrap")
             if pitScrap then
                 for _, looseItem in ipairs(pitScrap:GetChildren()) do
@@ -215,7 +230,6 @@ MainTab:Button({
                 end
             end
 
-            -- 2. Tween ke Recycler1 + Fire Rebirth instan 10 studs sebelum sampai
             local recyclers = workspace:FindFirstChild("Recyclers")
             local recycler1 = recyclers and recyclers:FindFirstChild("Recycler1")
             
@@ -230,11 +244,9 @@ MainTab:Button({
                     local stopDistance = math.max(0, totalDistance - 10)
                     local positionBeforeRecycler = startPos + (direction * stopDistance)
 
-                    -- Phase 1: Tween ke titik 10 studs dari Recycler
                     local tw1 = tweenTo(positionBeforeRecycler)
                     tw1.Completed:Wait()
 
-                    -- Fire Rebirth INSTAN tanpa jeda
                     task.spawn(function()
                         pcall(function()
                             ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Rebirth"):InvokeServer()
@@ -242,7 +254,6 @@ MainTab:Button({
                     end)
                     WindUI:Notify({Title = "Rebirth", Content = "Rebirth Fired on Timing!", Duration = 2})
 
-                    -- Phase 2: Langsung sambung ke target Recycler1
                     local tw2 = tweenTo(targetPos)
                     tw2.Completed:Wait()
                 end
@@ -252,8 +263,6 @@ MainTab:Button({
         end)
     end
 })
-
-
 
 --------------------------------------------------
 --// AUTO CLAIM INCUBATOR
@@ -402,7 +411,6 @@ local function getRarityFromColor(color)
     return "Unknown"
 end
 
--- Path baru Scrolling Frame ayam
 local function getChickenScrollingFrame()
     local success, result = pcall(function()
         return LocalPlayer.PlayerGui.Collection.Flock.ChickenHolder.ScrollingFrame
@@ -444,7 +452,6 @@ MainTab:Button({
             if i % 15 == 0 then task.wait() end
 
             pcall(function()
-                -- Memastikan objek adalah GuiObject dan namanya diawali 'c' (misal c13)
                 if item:IsA("GuiObject") and string.sub(item.Name, 1, 1) == "c" and item.Visible then
                     local nameLabel = item:FindFirstChild("ChickenName")
                     local faceFrame = item:FindFirstChild("face") or item:FindFirstChild("Background")
@@ -534,3 +541,4 @@ MainTab:Toggle({
         end
     end
 })
+
