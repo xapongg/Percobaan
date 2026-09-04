@@ -1,5 +1,5 @@
 if not game:IsLoaded() then game.Loaded:Wait() end
-
+-- baru
 --// Services
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
