@@ -33,9 +33,12 @@ if AntiAFK_Enabled then
     end)
 end
 
---// Referensi Remote
-local collectBalanceRE = ReplicatedStorage:WaitForChild("Network"):WaitForChild("PlotService"):WaitForChild("RE"):WaitForChild("CollectBalance")
-local rollDiceRF = ReplicatedStorage:WaitForChild("Network"):WaitForChild("RollService"):WaitForChild("RF"):WaitForChild("RollDice")
+--// Referensi Remote (Menggunakan pcall/aman dari nil)
+local collectBalanceRE, rollDiceRF
+pcall(function()
+    collectBalanceRE = ReplicatedStorage:WaitForChild("Network", 5):WaitForChild("PlotService", 5):WaitForChild("RE", 5):WaitForChild("CollectBalance", 5)
+    rollDiceRF = ReplicatedStorage:WaitForChild("Network", 5):WaitForChild("RollService", 5):WaitForChild("RF", 5):WaitForChild("RollDice", 5)
+end)
 
 --// Wind UI
 local Icons = loadstring(game:HttpGetAsync(
@@ -174,8 +177,10 @@ MainTab:Toggle({
             task.spawn(function()
                 while _G.AutoCollect do
                     pcall(function()
-                        for i = 1, 13 do
-                            collectBalanceRE:FireServer(i)
+                        if collectBalanceRE then
+                            for i = 1, 13 do
+                                collectBalanceRE:FireServer(i)
+                            end
                         end
                     end)
                     task.wait(15)
@@ -194,7 +199,9 @@ MainTab:Toggle({
             task.spawn(function()
                 while _G.AutoRoll do
                     pcall(function()
-                        rollDiceRF:InvokeServer()
+                        if rollDiceRF then
+                            rollDiceRF:InvokeServer()
+                        end
                     end)
                     task.wait()
                 end
@@ -221,7 +228,6 @@ MainTab:Toggle({
                             for _, obj in ipairs(applesFolder:GetChildren()) do
                                 if not _G.AutoWalkApple then break end
                                 
-                                -- Cek apakah nama objek berawalan "Apple_" dan memiliki posisi (BasePart / Model dengan PrimaryPart)
                                 if obj.Name:sub(1, 6) == "Apple_" then
                                     local targetPos = nil
                                     if obj:IsA("BasePart") then
@@ -235,15 +241,15 @@ MainTab:Toggle({
 
                                     if targetPos then
                                         humanoid:MoveTo(targetPos)
-                                        -- Tunggu sampai karakter mendekati posisi atau timeout 2 detik
                                         local startTime = tick()
                                         repeat
                                             task.wait(0.1)
                                         until (rootPart.Position - targetPos).Magnitude < 4 or not _G.AutoWalkApple or (tick() - startTime) > 3
+                                    end
+                                end
                             end
                         end
-                    end
-                end
+                    end)
                     task.wait(0.5)
                 end
             end)
