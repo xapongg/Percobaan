@@ -163,11 +163,6 @@ local MainTab = Window:Tab({
 
 MainTab:Select()
 
---// SECTION / TOGGLES
-MainTab:Section({
-    Title = "Auto Farming",
-})
-
 MainTab:Toggle({
     Title = "Auto Collect Balance (15s Delay)",
     Default = false,
