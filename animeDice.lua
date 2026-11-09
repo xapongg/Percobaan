@@ -260,14 +260,14 @@ pcall(function()
 end)
 
 -- Variabel untuk menyimpan item yang dipilih di dropdown (Multi-Select)
-local SelectedItems = {}
+local SelectedItems = {"Apple Juice III", "Orchard Luck III", "Maple Syrup III", "Acorn Luck II", "Harvest Luck II", "Golden Harvest II", "Leaf Feast II"}
 
 MainTab:Dropdown({
     Title = "Select Items to Buy",
     Desc = "Pilih beberapa item yang ingin dibeli sekaligus (Multi-Select).",
     Values = { "Apple Juice III", "Orchard Luck III", "Maple Syrup III", "Acorn Luck II", "Harvest Luck II", "Golden Harvest II", "Leaf Feast II" }, -- Ganti atau tambah daftar item sesuai kebutuhan game
     Multi = true, -- Mengaktifkan fitur multi-select
-    Default = {},
+    Default = SelectedItems,
     Callback = function(Options)
         SelectedItems = Options
     end
@@ -290,7 +290,7 @@ MainTab:Toggle({
                             end
                         end
                     end)
-                    task.wait(1)
+                    task.wait(0.1)
                 end
             end)
         end
