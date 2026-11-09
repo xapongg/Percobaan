@@ -252,29 +252,47 @@ MainTab:Toggle({
     end
 })
 
-
---// Referensi Remote Shop (Tambahkan di bagian atas bersama remote lainnya)
+--// Referensi Remote Shop (Taruh di bagian atas bersama remote lainnya)
 local buyRF
 pcall(function()
     buyRF = ReplicatedStorage:WaitForChild("Network", 5):WaitForChild("AppleShopService", 5):WaitForChild("RF", 5):WaitForChild("Buy", 5)
 end)
 
--- Variabel untuk menyimpan item yang dipilih di dropdown (Multi-Select)
-local SelectedItems = {"Apple Juice III", "Orchard Luck III", "Maple Syrup III", "Acorn Luck II", "Harvest Luck II", "Golden Harvest II", "Leaf Feast II"}
+--// Daftar Semua Item
+local AllItemsList = { 
+    "Apple Juice III", 
+    "Orchard Luck III", 
+    "Maple Syrup III", 
+    "Acorn Luck II", 
+    "Harvest Luck II", 
+    "Golden Harvest II", 
+    "Leaf Feast II" 
+}
+
+--// Agar langsung otomatis terpilih semua saat pertama kali dimuat
+local SelectedItems = {}
+for _, item in ipairs(AllItemsList) do
+    table.insert(SelectedItems, item)
+end
+
+--// Bagian Section & Komponen GUI (Taruh di dalam Tab utama Anda)
+MainTab:Section({
+    Title = "Shop Automation",
+})
 
 MainTab:Dropdown({
     Title = "Select Items to Buy",
-    Desc = "Pilih beberapa item yang ingin dibeli sekaligus (Multi-Select).",
-    Values = { "Apple Juice III", "Orchard Luck III", "Maple Syrup III", "Acorn Luck II", "Harvest Luck II", "Golden Harvest II", "Leaf Feast II" }, -- Ganti atau tambah daftar item sesuai kebutuhan game
-    Multi = true, -- Mengaktifkan fitur multi-select
-    Default = SelectedItems,
+    Desc = "Pilih item yang ingin dibeli (Otomatis terpilih semua).",
+    Values = AllItemsList,
+    Multi = true, 
+    Default = SelectedItems, -- Otomatis ter-check semua dari awal
     Callback = function(Options)
         SelectedItems = Options
     end
 })
 
 MainTab:Toggle({
-    Title = "Auto Buy Selected Items",
+    Title = "Auto Buy Selected Items (Fast)",
     Default = false,
     Callback = function(Value)
         _G.AutoBuySelected = Value
@@ -285,15 +303,15 @@ MainTab:Toggle({
                         if buyRF and SelectedItems then
                             for _, itemName in pairs(SelectedItems) do
                                 if not _G.AutoBuySelected then break end
+                                -- Mengirim request beli secara langsung tanpa jeda per item
                                 buyRF:InvokeServer(itemName)
-                                task.wait(0.1)
                             end
                         end
                     end)
-                    task.wait(0.1)
+                    -- Jeda antar putaran loop besar dipercepat jadi 0.2 detik saja (atau task.wait() jika ingin terus menerus)
+                    task.wait(0.07) 
                 end
             end)
         end
     end
 })
-
