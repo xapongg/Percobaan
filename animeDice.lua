@@ -251,3 +251,49 @@ MainTab:Toggle({
         end
     end
 })
+
+
+--// Referensi Remote Shop (Tambahkan di bagian atas bersama remote lainnya)
+local buyRF
+pcall(function()
+    buyRF = ReplicatedStorage:WaitForChild("Network", 5):WaitForChild("AppleShopService", 5):WaitForChild("RF", 5):WaitForChild("Buy", 5)
+end)
+
+-- Variabel untuk menyimpan item yang dipilih di dropdown (Multi-Select)
+local SelectedItems = {}
+
+MainTab:Dropdown({
+    Title = "Select Items to Buy",
+    Desc = "Pilih beberapa item yang ingin dibeli sekaligus (Multi-Select).",
+    Values = { "Apple Juice III", "Orchard Luck III", "Maple Syrup III", "Acorn Luck II", "Harvest Luck II", "Golden Harvest II", "Leaf Feast II" }, -- Ganti atau tambah daftar item sesuai kebutuhan game
+    Multi = true, -- Mengaktifkan fitur multi-select
+    Default = {},
+    Callback = function(Options)
+        SelectedItems = Options
+    end
+})
+
+MainTab:Toggle({
+    Title = "Auto Buy Selected Items",
+    Default = false,
+    Callback = function(Value)
+        _G.AutoBuySelected = Value
+        if Value then
+            task.spawn(function()
+                while _G.AutoBuySelected do
+                    pcall(function()
+                        if buyRF and SelectedItems then
+                            for _, itemName in pairs(SelectedItems) do
+                                if not _G.AutoBuySelected then break end
+                                buyRF:InvokeServer(itemName)
+                                task.wait(0.1)
+                            end
+                        end
+                    end)
+                    task.wait(1)
+                end
+            end)
+        end
+    end
+})
+
