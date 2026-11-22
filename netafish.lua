@@ -1,15 +1,11 @@
 -- loadstring(game:HttpGet("https://raw.githubusercontent.com/xapongg/Percobaan/refs/heads/main/netafish.lua"))()
 
 
-
-
-
 --// Services
 local Players = game:GetService("Players")
 local VirtualUser = game:GetService("VirtualUser")
 local VIM = game:GetService("VirtualInputManager")
 local UIS = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -94,7 +90,7 @@ ToggleButton.ImageColor3 = Color3.fromRGB(255,255,255)
 ToggleButton.ZIndex = 999
 
 local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = U.new(0, 12)
+UICorner.CornerRadius = UDim.new(0, 12)
 UICorner.Parent = ToggleButton
 
 local UIStroke = Instance.new("UIStroke")
@@ -165,139 +161,6 @@ MainTab:Select()
 local AutoEquipBest_Enabled = false
 local AutoReelIn_Enabled = false
 local ReelIn_Delay = 60
-local LockPads_Conn = nil
-
-local function getOwnedBase()
-    local mapFolder = workspace:FindFirstChild("Map")
-    local basesFolder = mapFolder and mapFolder:FindFirstChild("Bases")
-    if not basesFolder then return nil end
-
-    local displayName = LocalPlayer.DisplayName
-    local userName = LocalPlayer.Name
-
-    for _, base in ipairs(basesFolder:GetChildren()) do
-        local ownerBadge = base:FindFirstChild("OwnerBadge")
-        local badgePart = ownerBadge and ownerBadge:FindFirstChild("Badge")
-        local textLabel = badgePart and badgePart:FindFirstChild("TextLabel")
-
-        if textLabel and textLabel:IsA("TextLabel") then
-            local labelText = tostring(textLabel.Text)
-            if labelText == displayName
-                or string.find(labelText, displayName, 1, true)
-                or labelText == userName
-                or string.find(labelText, userName, 1, true)
-            then
-                return base
-            end
-        end
-    end
-
-    return nil
-end
-
-local function getTargetPad(ownedBase)
-    local pedestals = ownedBase and ownedBase:FindFirstChild("Pedestals")
-    local pedestal1 = pedestals and pedestals:FindFirstChild("Pedestal1")
-    local collect1 = pedestal1 and pedestal1:FindFirstChild("Collect")
-    return collect1 and collect1:FindFirstChild("Pad"), pedestals
-end
-
-local function syncPadsOnce(ownedBase)
-    local targetPad, pedestals = getTargetPad(ownedBase)
-    if not targetPad or not pedestals then return end
-
-    local targetCFrame = targetPad.CFrame
-    for i = 2, 10 do
-        local ped = pedestals:FindFirstChild("Pedestal" .. i)
-        local collectObj = ped and ped:FindFirstChild("Collect")
-        local padPart = collectObj and collectObj:FindFirstChild("Pad")
-        if padPart and padPart:IsA("BasePart") then
-            pcall(function()
-                padPart.Anchored = true
-                padPart.CanCollide = false
-                padPart.CFrame = targetCFrame
-            end)
-        end
-    end
-end
-
-local function triggerCollectPads1To10()
-    local ownedBase = getOwnedBase()
-    if not ownedBase then
-        WindUI:Notify({
-            Title = "Collect Failed",
-            Content = "Base milik " .. LocalPlayer.DisplayName .. " tidak ditemukan",
-            Duration = 4,
-        })
-        return
-    end
-
-    local targetPad, pedestals = getTargetPad(ownedBase)
-    if not targetPad or not pedestals then
-        WindUI:Notify({
-            Title = "Collect Failed",
-            Content = "Pedestal1.Collect.Pad tidak ditemukan",
-            Duration = 4,
-        })
-        return
-    end
-
-    syncPadsOnce(ownedBase)
-
-    -- Pertahankan posisi Pad 2-10 di Pedestal1.Collect.Pad agar tidak mental/balik saat diinjak
-    if LockPads_Conn then
-        LockPads_Conn:Disconnect()
-        LockPads_Conn = nil
-    end
-
-    local lockUntil = os.clock() + 3
-    LockPads_Conn = RunService.Heartbeat:Connect(function()
-        if os.clock() > lockUntil then
-            if LockPads_Conn then
-                LockPads_Conn:Disconnect()
-                LockPads_Conn = nil
-            end
-            return
-        end
-        syncPadsOnce(ownedBase)
-    end)
-
-    local character = LocalPlayer.Character
-    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-    local collectRemote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CollectPadReq")
-
-    for i = 1, 10 do
-        local ped = pedestals:FindFirstChild("Pedestal" .. i)
-        local collectObj = ped and ped:FindFirstChild("Collect")
-        local padPart = collectObj and collectObj:FindFirstChild("Pad")
-
-        if rootPart and padPart and padPart:IsA("BasePart") and firetouchinterest then
-            pcall(function()
-                firetouchinterest(rootPart, padPart, 0)
-                task.wait(0.01)
-                firetouchinterest(rootPart, padPart, 1)
-            end)
-        end
-
-        pcall(function()
-            collectRemote:FireServer(i)
-        end)
-    end
-
-    WindUI:Notify({
-        Title = "Collect Pads (1 - 10)",
-        Content = "Pad 1-10 disatukan ke Pedestal1 & dipicu di " .. ownedBase.Name,
-        Duration = 3,
-    })
-end
-
-MainTab:Button({
-    Title = "Collect Pads (1 - 10)",
-    Desc = "Locks Pad 1-10 to Pedestal1.Collect.Pad and collects all without teleporting",
-    Callback = function()
-        triggerCollectPads1To10()
-    end
-})
 
 MainTab:Toggle({
     Title = "Auto Equip Best",
