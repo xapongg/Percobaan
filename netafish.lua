@@ -190,7 +190,7 @@ local function getOwnedBase()
     return nil
 end
 
-local function collectAllPadsAtPad1()
+local function mergeCollectsToPedestal1()
     local ownedBase = getOwnedBase()
     if not ownedBase then
         WindUI:Notify({
@@ -203,21 +203,50 @@ local function collectAllPadsAtPad1()
 
     local pedestals = ownedBase:FindFirstChild("Pedestals")
     local pedestal1 = pedestals and pedestals:FindFirstChild("Pedestal1")
-    local collectFolder = pedestal1 and pedestal1:FindFirstChild("Collect")
-    local padPart = collectFolder and collectFolder:FindFirstChild("Pad")
+    local targetCollect = pedestal1 and pedestal1:FindFirstChild("Collect")
+    local targetPad = targetCollect and (targetCollect:FindFirstChild("Pad") or targetCollect:FindFirstChildWhichIsA("BasePart"))
 
+    if not targetCollect or not targetPad then
+        WindUI:Notify({
+            Title = "Collect Failed",
+            Content = "Pedestal1.Collect tidak ditemukan",
+            Duration = 4,
+        })
+        return
+    end
+
+    local targetCFrame = targetPad.CFrame
     local character = LocalPlayer.Character
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 
-    if padPart and padPart:IsA("BasePart") and rootPart then
-        rootPart.CFrame = padPart.CFrame + Vector3.new(0, 3, 0)
-        pcall(function()
-            if firetouchinterest then
-                firetouchinterest(rootPart, padPart, 0)
-                task.wait(0.05)
-                firetouchinterest(rootPart, padPart, 1)
+    -- Gabungkan semua Collect dari Pedestal 1 sampai 10 ke posisi Pedestal1.Collect
+    for i = 1, 10 do
+        local ped = pedestals:FindFirstChild("Pedestal" .. i)
+        local collectObj = ped and ped:FindFirstChild("Collect")
+        if collectObj then
+            if collectObj:IsA("Model") then
+                pcall(function()
+                    collectObj:PivotTo(targetCFrame)
+                end)
+            elseif collectObj:IsA("BasePart") then
+                collectObj.CFrame = targetCFrame
+                collectObj.CanCollide = false
             end
-        end)
+
+            for _, desc in ipairs(collectObj:GetDescendants()) do
+                if desc:IsA("BasePart") then
+                    desc.CFrame = targetCFrame
+                    desc.CanCollide = false
+                    if rootPart and firetouchinterest then
+                        pcall(function()
+                            firetouchinterest(rootPart, desc, 0)
+                            task.wait(0.02)
+                            firetouchinterest(rootPart, desc, 1)
+                        end)
+                    end
+                end
+            end
+        end
     end
 
     local collectRemote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CollectPadReq")
@@ -228,17 +257,17 @@ local function collectAllPadsAtPad1()
     end
 
     WindUI:Notify({
-        Title = "Collect Done",
-        Content = "Collected pads 1 - 10 at " .. ownedBase.Name,
+        Title = "Merged & Collected",
+        Content = "Collect Pedestal 1 - 10 digabung di Pedestal1 (" .. ownedBase.Name .. ")",
         Duration = 3,
     })
 end
 
 MainTab:Button({
     Title = "Collect Pads (1 - 10)",
-    Desc = "Goes to Pedestal1 Collect Pad on your base and collects 1 - 10",
+    Desc = "Merges Pedestal 1 - 10 Collect into Pedestal1 and collects all",
     Callback = function()
-        collectAllPadsAtPad1()
+        mergeCollectsToPedestal1()
     end
 })
 
