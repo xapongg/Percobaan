@@ -158,35 +158,87 @@ local MainTab = Window:Tab({
 
 MainTab:Select()
 
-local AutoCollect_Enabled = false
 local AutoEquipBest_Enabled = false
 local AutoReelIn_Enabled = false
 local ReelIn_Delay = 60
 
-MainTab:Toggle({
-    Title = "Auto Collect (1 - 10)",
-    Desc = "Collects pads 1 to 10 every 15 seconds",
-    Default = false,
-    Callback = function(state)
-        AutoCollect_Enabled = state
-        if not AutoCollect_Enabled then return end
+local function getOwnedBase()
+    local mapFolder = workspace:FindFirstChild("Map")
+    local basesFolder = mapFolder and mapFolder:FindFirstChild("Bases")
+    if not basesFolder then return nil end
 
-        task.spawn(function()
-            while AutoCollect_Enabled do
-                for padIndex = 1, 10 do
-                    if not AutoCollect_Enabled then break end
-                    pcall(function()
-                        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CollectPadReq"):FireServer(padIndex)
-                    end)
-                end
+    local displayName = LocalPlayer.DisplayName
+    local userName = LocalPlayer.Name
 
-                local elapsed = 0
-                while AutoCollect_Enabled and elapsed < 15 do
-                    local dt = task.wait(0.25)
-                    elapsed += dt
-                end
+    for _, base in ipairs(basesFolder:GetChildren()) do
+        local ownerBadge = base:FindFirstChild("OwnerBadge")
+        local badgePart = ownerBadge and ownerBadge:FindFirstChild("Badge")
+        local textLabel = badgePart and badgePart:FindFirstChild("TextLabel")
+
+        if textLabel and textLabel:IsA("TextLabel") then
+            local labelText = tostring(textLabel.Text)
+            if labelText == displayName
+                or string.find(labelText, displayName, 1, true)
+                or labelText == userName
+                or string.find(labelText, userName, 1, true)
+            then
+                return base
+            end
+        end
+    end
+
+    return nil
+end
+
+local function collectAllPadsAtPad1()
+    local ownedBase = getOwnedBase()
+    if not ownedBase then
+        WindUI:Notify({
+            Title = "Collect Failed",
+            Content = "Base milik " .. LocalPlayer.DisplayName .. " tidak ditemukan",
+            Duration = 4,
+        })
+        return
+    end
+
+    local pedestals = ownedBase:FindFirstChild("Pedestals")
+    local pedestal1 = pedestals and pedestals:FindFirstChild("Pedestal1")
+    local collectFolder = pedestal1 and pedestal1:FindFirstChild("Collect")
+    local padPart = collectFolder and collectFolder:FindFirstChild("Pad")
+
+    local character = LocalPlayer.Character
+    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+
+    if padPart and padPart:IsA("BasePart") and rootPart then
+        rootPart.CFrame = padPart.CFrame + Vector3.new(0, 3, 0)
+        pcall(function()
+            if firetouchinterest then
+                firetouchinterest(rootPart, padPart, 0)
+                task.wait(0.05)
+                firetouchinterest(rootPart, padPart, 1)
             end
         end)
+    end
+
+    local collectRemote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CollectPadReq")
+    for padIndex = 1, 10 do
+        pcall(function()
+            collectRemote:FireServer(padIndex)
+        end)
+    end
+
+    WindUI:Notify({
+        Title = "Collect Done",
+        Content = "Collected pads 1 - 10 at " .. ownedBase.Name,
+        Duration = 3,
+    })
+end
+
+MainTab:Button({
+    Title = "Collect Pads (1 - 10)",
+    Desc = "Goes to Pedestal1 Collect Pad on your base and collects 1 - 10",
+    Callback = function()
+        collectAllPadsAtPad1()
     end
 })
 
