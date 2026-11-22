@@ -1,11 +1,15 @@
 -- loadstring(game:HttpGet("https://raw.githubusercontent.com/xapongg/Percobaan/refs/heads/main/netafish.lua"))()
 
 
+
+
+
 --// Services
 local Players = game:GetService("Players")
 local VirtualUser = game:GetService("VirtualUser")
 local VIM = game:GetService("VirtualInputManager")
 local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -90,7 +94,7 @@ ToggleButton.ImageColor3 = Color3.fromRGB(255,255,255)
 ToggleButton.ZIndex = 999
 
 local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.CornerRadius = U.new(0, 12)
 UICorner.Parent = ToggleButton
 
 local UIStroke = Instance.new("UIStroke")
@@ -161,6 +165,7 @@ MainTab:Select()
 local AutoEquipBest_Enabled = false
 local AutoReelIn_Enabled = false
 local ReelIn_Delay = 60
+local LockPads_Conn = nil
 
 local function getOwnedBase()
     local mapFolder = workspace:FindFirstChild("Map")
@@ -190,7 +195,33 @@ local function getOwnedBase()
     return nil
 end
 
-local function mergeCollectsToPedestal1()
+local function getTargetPad(ownedBase)
+    local pedestals = ownedBase and ownedBase:FindFirstChild("Pedestals")
+    local pedestal1 = pedestals and pedestals:FindFirstChild("Pedestal1")
+    local collect1 = pedestal1 and pedestal1:FindFirstChild("Collect")
+    return collect1 and collect1:FindFirstChild("Pad"), pedestals
+end
+
+local function syncPadsOnce(ownedBase)
+    local targetPad, pedestals = getTargetPad(ownedBase)
+    if not targetPad or not pedestals then return end
+
+    local targetCFrame = targetPad.CFrame
+    for i = 2, 10 do
+        local ped = pedestals:FindFirstChild("Pedestal" .. i)
+        local collectObj = ped and ped:FindFirstChild("Collect")
+        local padPart = collectObj and collectObj:FindFirstChild("Pad")
+        if padPart and padPart:IsA("BasePart") then
+            pcall(function()
+                padPart.Anchored = true
+                padPart.CanCollide = false
+                padPart.CFrame = targetCFrame
+            end)
+        end
+    end
+end
+
+local function triggerCollectPads1To10()
     local ownedBase = getOwnedBase()
     if not ownedBase then
         WindUI:Notify({
@@ -201,73 +232,70 @@ local function mergeCollectsToPedestal1()
         return
     end
 
-    local pedestals = ownedBase:FindFirstChild("Pedestals")
-    local pedestal1 = pedestals and pedestals:FindFirstChild("Pedestal1")
-    local targetCollect = pedestal1 and pedestal1:FindFirstChild("Collect")
-    local targetPad = targetCollect and (targetCollect:FindFirstChild("Pad") or targetCollect:FindFirstChildWhichIsA("BasePart"))
-
-    if not targetCollect or not targetPad then
+    local targetPad, pedestals = getTargetPad(ownedBase)
+    if not targetPad or not pedestals then
         WindUI:Notify({
             Title = "Collect Failed",
-            Content = "Pedestal1.Collect tidak ditemukan",
+            Content = "Pedestal1.Collect.Pad tidak ditemukan",
             Duration = 4,
         })
         return
     end
 
-    local targetCFrame = targetPad.CFrame
+    syncPadsOnce(ownedBase)
+
+    -- Pertahankan posisi Pad 2-10 di Pedestal1.Collect.Pad agar tidak mental/balik saat diinjak
+    if LockPads_Conn then
+        LockPads_Conn:Disconnect()
+        LockPads_Conn = nil
+    end
+
+    local lockUntil = os.clock() + 3
+    LockPads_Conn = RunService.Heartbeat:Connect(function()
+        if os.clock() > lockUntil then
+            if LockPads_Conn then
+                LockPads_Conn:Disconnect()
+                LockPads_Conn = nil
+            end
+            return
+        end
+        syncPadsOnce(ownedBase)
+    end)
+
     local character = LocalPlayer.Character
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+    local collectRemote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CollectPadReq")
 
-    -- Gabungkan semua Collect dari Pedestal 1 sampai 10 ke posisi Pedestal1.Collect
     for i = 1, 10 do
         local ped = pedestals:FindFirstChild("Pedestal" .. i)
         local collectObj = ped and ped:FindFirstChild("Collect")
-        if collectObj then
-            if collectObj:IsA("Model") then
-                pcall(function()
-                    collectObj:PivotTo(targetCFrame)
-                end)
-            elseif collectObj:IsA("BasePart") then
-                collectObj.CFrame = targetCFrame
-                collectObj.CanCollide = false
-            end
+        local padPart = collectObj and collectObj:FindFirstChild("Pad")
 
-            for _, desc in ipairs(collectObj:GetDescendants()) do
-                if desc:IsA("BasePart") then
-                    desc.CFrame = targetCFrame
-                    desc.CanCollide = false
-                    if rootPart and firetouchinterest then
-                        pcall(function()
-                            firetouchinterest(rootPart, desc, 0)
-                            task.wait(0.02)
-                            firetouchinterest(rootPart, desc, 1)
-                        end)
-                    end
-                end
-            end
+        if rootPart and padPart and padPart:IsA("BasePart") and firetouchinterest then
+            pcall(function()
+                firetouchinterest(rootPart, padPart, 0)
+                task.wait(0.01)
+                firetouchinterest(rootPart, padPart, 1)
+            end)
         end
-    end
 
-    local collectRemote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CollectPadReq")
-    for padIndex = 1, 10 do
         pcall(function()
-            collectRemote:FireServer(padIndex)
+            collectRemote:FireServer(i)
         end)
     end
 
     WindUI:Notify({
-        Title = "Merged & Collected",
-        Content = "Collect Pedestal 1 - 10 digabung di Pedestal1 (" .. ownedBase.Name .. ")",
+        Title = "Collect Pads (1 - 10)",
+        Content = "Pad 1-10 disatukan ke Pedestal1 & dipicu di " .. ownedBase.Name,
         Duration = 3,
     })
 end
 
 MainTab:Button({
     Title = "Collect Pads (1 - 10)",
-    Desc = "Merges Pedestal 1 - 10 Collect into Pedestal1 and collects all",
+    Desc = "Locks Pad 1-10 to Pedestal1.Collect.Pad and collects all without teleporting",
     Callback = function()
-        mergeCollectsToPedestal1()
+        triggerCollectPads1To10()
     end
 })
 
