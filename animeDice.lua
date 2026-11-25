@@ -173,7 +173,7 @@ MainTab:Toggle({
                 while _G.AutoCollect do
                     pcall(function()
                         if collectBalanceRE then
-                            for i = 1, 13 do
+                            for i = 1, 24 do
                                 collectBalanceRE:FireServer(i)
                             end
                         end
@@ -204,6 +204,109 @@ MainTab:Toggle({
         end
     end
 })
+
+--// Referensi Remote Level Up Slot (Taruh bersama remote lainnya)
+local levelUpSlotRE
+pcall(function()
+	levelUpSlotRE = ReplicatedStorage:WaitForChild("Network", 5)
+		:WaitForChild("PlotService", 5)
+		:WaitForChild("RE", 5)
+		:WaitForChild("LevelUpSlot", 5)
+end)
+
+--// Helper: Cari plot milik LocalPlayer berdasarkan PlayerName
+local function getOwnedPlot()
+	local plotsFolder = workspace:FindFirstChild("Plots")
+	local claimedFolder = plotsFolder and plotsFolder:FindFirstChild("Claimed")
+	if not claimedFolder then
+		return nil
+	end
+
+	for _, plot in ipairs(claimedFolder:GetChildren()) do
+		local label = plot:FindFirstChild("Label")
+		local billboard = label and label:FindFirstChild("BillboardGui")
+		local playerNameLabel = billboard and billboard:FindFirstChild("PlayerName")
+
+		if playerNameLabel and (playerNameLabel:IsA("TextLabel") or playerNameLabel:IsA("TextBox")) then
+			local txt = playerNameLabel.Text
+			if txt == LocalPlayer.DisplayName or txt == LocalPlayer.Name then
+				return plot
+			end
+		end
+	end
+
+	return nil
+end
+
+--// Helper: Parse level saat ini dari teks "Lvl 100 > 101"
+local function getSlotCurrentLevel(slot)
+	local upgrade = slot:FindFirstChild("Upgrade")
+	local board = upgrade and upgrade:FindFirstChild("Board")
+	local surfaceGui = board and board:FindFirstChild("SurfaceGui")
+	local frame = surfaceGui and surfaceGui:FindFirstChild("Frame")
+	local levelLabel = frame and frame:FindFirstChild("Level")
+
+	if levelLabel and (levelLabel:IsA("TextLabel") or levelLabel:IsA("TextBox")) then
+		local currentLvl = tonumber(levelLabel.Text:match("Lvl%s*(%d+)"))
+		return currentLvl
+	end
+
+	return nil
+end
+
+--// State Slider & Toggle
+local TargetSlotLevel = 30
+_G.AutoLevelUpSlot = false
+
+MainTab:Slider({
+	Title = "Target Slot Level",
+	Desc = "Level maksimal yang ingin dicapai tiap slot (30 - 150).",
+	Step = 5,
+	Value = {
+		Min = 30,
+		Max = 150,
+		Default = 30,
+	},
+	Callback = function(Value)
+		TargetSlotLevel = tonumber(Value) or 30
+	end
+})
+
+MainTab:Toggle({
+	Title = "Auto Level Up Slots",
+	Default = false,
+	Callback = function(Value)
+		_G.AutoLevelUpSlot = Value
+		if Value then
+			task.spawn(function()
+				while _G.AutoLevelUpSlot do
+					pcall(function()
+						if not levelUpSlotRE then return end
+
+						local ownedPlot = getOwnedPlot()
+						local slotsFolder = ownedPlot and ownedPlot:FindFirstChild("Slots")
+						if not slotsFolder then return end
+
+						for _, slot in ipairs(slotsFolder:GetChildren()) do
+							if not _G.AutoLevelUpSlot then break end
+
+							local slotNum = tonumber(slot.Name)
+							local currentLvl = getSlotCurrentLevel(slot)
+
+							if slotNum and currentLvl and currentLvl < TargetSlotLevel then
+								levelUpSlotRE:FireServer(slotNum)
+								task.wait(0.05)
+							end
+						end
+					end)
+					task.wait(0.3)
+				end
+			end)
+		end
+	end
+})
+
+
 
 MainTab:Toggle({
     Title = "Auto Walk to Apple",
