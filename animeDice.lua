@@ -357,6 +357,55 @@ MainTab:Toggle({
     end
 })
 
+MainTab:Toggle({
+	Title = "Auto Bring Apples",
+	Default = false,
+	Callback = function(Value)
+		_G.AutoBringApple = Value
+		if Value then
+			task.spawn(function()
+				while _G.AutoBringApple do
+					pcall(function()
+						local char = LocalPlayer.Character
+						local rootPart = char and char:FindFirstChild("HumanoidRootPart")
+						local applesFolder = Workspace:FindFirstChild("AutumnApples")
+
+						if rootPart and applesFolder then
+							for _, obj in ipairs(applesFolder:GetChildren()) do
+								if not _G.AutoBringApple then break end
+
+								if obj.Name:sub(1, 6) == "Apple_" then
+									if obj:IsA("BasePart") then
+										obj.CanCollide = false
+										obj.CFrame = rootPart.CFrame
+										if firetouchinterest then
+											firetouchinterest(rootPart, obj, 0)
+											firetouchinterest(rootPart, obj, 1)
+										end
+									elseif obj:IsA("Model") then
+										for _, part in ipairs(obj:GetDescendants()) do
+											if part:IsA("BasePart") then
+												part.CanCollide = false
+												part.CFrame = rootPart.CFrame
+												if firetouchinterest then
+													firetouchinterest(rootPart, part, 0)
+													firetouchinterest(rootPart, part, 1)
+												end
+											end
+										end
+									end
+								end
+							end
+						end
+					end)
+					task.wait(0.1)
+				end
+			end)
+		end
+	end
+})
+
+
 --// Referensi Remote Shop (Taruh di bagian atas bersama remote lainnya)
 local buyRF
 pcall(function()
