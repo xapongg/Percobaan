@@ -1,4 +1,4 @@
--- loadstring(game:HttpGet(""))()
+-- loadstring(game:HttpGet("https://raw.githubusercontent.com/xapongg/Percobaan/refs/heads/main/XapTool.lua"))()
 
 
 --// Services
