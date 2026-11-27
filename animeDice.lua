@@ -288,7 +288,7 @@ local function getSlotCurrentLevel(slot)
 end
 
 --// State Slider & Toggle
-local TargetSlotLevel = 30
+local TargetSlotLevel = 15
 _G.AutoLevelUpSlot = false
 
 MainTab:Slider({
@@ -296,12 +296,12 @@ MainTab:Slider({
 	Desc = "Level maksimal yang ingin dicapai tiap slot (30 - 150).",
 	Step = 5,
 	Value = {
-		Min = 30,
-		Max = 150,
-		Default = 30,
+		Min = 15,
+		Max = 125,
+		Default = 15,
 	},
 	Callback = function(Value)
-		TargetSlotLevel = tonumber(Value) or 30
+		TargetSlotLevel = tonumber(Value) or 15
 	end
 })
 
