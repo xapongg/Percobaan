@@ -207,6 +207,37 @@ MainTab:Toggle({
     end
 })
 
+--// Referensi Remote Leaf Dice (Taruh bersama remote lainnya)
+local leafDiceRollRF
+pcall(function()
+	leafDiceRollRF = ReplicatedStorage:WaitForChild("Network", 5)
+		:WaitForChild("LeafDiceService", 5)
+		:WaitForChild("RF", 5)
+		:WaitForChild("Roll", 5)
+end)
+
+--// Toggle Auto Leaf Dice (Taruh di dalam Tab / Section)
+MainTab:Toggle({
+	Title = "Auto Leaf Dice (5)",
+	Default = false,
+	Callback = function(Value)
+		_G.AutoLeafDice = Value
+		if Value then
+			task.spawn(function()
+				while _G.AutoLeafDice do
+					pcall(function()
+						if leafDiceRollRF then
+							leafDiceRollRF:InvokeServer(5)
+						end
+					end)
+					task.wait(0.1)
+				end
+			end)
+		end
+	end
+})
+
+
 --// Referensi Remote Level Up Slot (Taruh bersama remote lainnya)
 local levelUpSlotRE
 pcall(function()
@@ -356,62 +387,6 @@ MainTab:Toggle({
         end
     end
 })
-
-MainTab:Toggle({
-	Title = "Auto Bring Apples",
-	Default = false,
-	Callback = function(Value)
-		_G.AutoBringApple = Value
-		if Value then
-			task.spawn(function()
-				while _G.AutoBringApple do
-					pcall(function()
-						local char = LocalPlayer.Character
-						local rootPart = char and char:FindFirstChild("HumanoidRootPart")
-						local applesFolder = workspace:FindFirstChild("AutumnApples", true)
-
-						if rootPart and applesFolder then
-							for _, obj in ipairs(applesFolder:GetChildren()) do
-								if not _G.AutoBringApple then break end
-
-								if obj.Name:find("Apple") then
-									-- Jika berupa Model, geser seluruh model dengan PivotTo
-									if obj:IsA("Model") then
-										obj:PivotTo(rootPart.CFrame)
-									end
-
-									-- Lepas weld/anchor pada part & tarik ke karakter
-									local targets = obj:IsA("BasePart") and { obj } or obj:GetDescendants()
-									for _, part in ipairs(targets) do
-										if part:IsA("BasePart") then
-											for _, joint in ipairs(part:GetChildren()) do
-												if joint:IsA("Weld") or joint:IsA("WeldConstraint") or joint:IsA("Motor6D") then
-													joint:Destroy()
-												end
-											end
-
-											part.Anchored = false
-											part.CanCollide = false
-											part.AssemblyLinearVelocity = Vector3.zero
-											part.CFrame = rootPart.CFrame
-
-											if firetouchinterest then
-												firetouchinterest(rootPart, part, 0)
-												firetouchinterest(rootPart, part, 1)
-											end
-										end
-									end
-								end
-							end
-						end
-					end)
-					task.wait(0.05)
-				end
-			end)
-		end
-	end
-})
-
 
 
 --// Referensi Remote Shop (Taruh di bagian atas bersama remote lainnya)
