@@ -463,3 +463,103 @@ MainTab:Toggle({
         end
     end
 })
+
+local PotionTab = Window:Tab({
+    Title = "Potion",
+    Icon = Icons.home
+})
+
+PotionTab:Button({
+	Title = "Fuse All Potion",
+	Desc = "Nyomot data potion langsung dari module game & fuse otomatis.",
+	Callback = function()
+		task.spawn(function()
+			pcall(function()
+				local fuseRF = ReplicatedStorage:WaitForChild("Network", 5)
+					:WaitForChild("PotionFusingService", 5)
+					:WaitForChild("RF", 5)
+					:WaitForChild("Fuse", 5)
+				if not fuseRF then return end
+
+				local imageToPotion = {}
+
+				-- Nyomot semua entry potion dari module di ReplicatedStorage
+				for _, desc in ipairs(ReplicatedStorage:GetDescendants()) do
+					if desc:IsA("ModuleScript") and (desc.Name:find("Potion") or desc.Name:find("Boost") or desc.Name:find("Autumn")) then
+						pcall(function()
+							local mod = require(desc)
+							local entries = type(mod) == "table" and (mod.entries or mod.Boosts or mod)
+							if type(entries) == "table" then
+								for name, data in pairs(entries) do
+									if type(data) == "table" and data.image and name ~= "Pumpkin Pot I" and name ~= "Pumpkin Pot II" and name ~= "Pumpkin Pot III" then
+										local numId = tostring(data.image):match("(%d+)")
+										if numId then
+											imageToPotion["rbxassetid://" .. numId] = tostring(name)
+										end
+									end
+								end
+							end
+						end)
+					end
+				end
+
+				local toRoman = { [1] = "I", [2] = "II", [3] = "III", [4] = "IV" }
+				local fromRoman = { ["I"] = 1, ["II"] = 2, ["III"] = 3, ["IV"] = 4 }
+
+				local scrolling = LocalPlayer:WaitForChild("PlayerGui")
+					:WaitForChild("Root"):WaitForChild("Menus"):WaitForChild("Backpack")
+					:WaitForChild("Items"):WaitForChild("ScrollingFrame")
+
+				local ownedQty = {}
+
+				for _, catFrame in ipairs(scrolling:GetChildren()) do
+					if catFrame.Name:find("Potion") then
+						local grid = catFrame:FindFirstChild("Grid")
+						if grid then
+							for _, entry in ipairs(grid:GetChildren()) do
+								if entry:IsA("GuiObject") and entry.Visible then
+									local imgLabel = entry:FindFirstChild("ImageLabel") or entry:FindFirstChildWhichIsA("ImageLabel", true)
+									local numId = imgLabel and tostring(imgLabel.Image):match("(%d+)")
+									local potionName = numId and imageToPotion["rbxassetid://" .. numId]
+
+									if potionName then
+										local topLabel = entry:FindFirstChild("TopLabel", true)
+										local qty = 1
+										if topLabel and (topLabel:IsA("TextLabel") or topLabel:IsA("TextBox")) then
+											local parsed = tonumber(topLabel.Text:match("%d+"))
+											if parsed then
+												qty = parsed
+											end
+										end
+										ownedQty[potionName] = (ownedQty[potionName] or 0) + qty
+									end
+								end
+							end
+						end
+					end
+				end
+
+				local fuseCost = 5
+				local payload = {}
+
+				for tier = 1, 3 do
+					for name, qty in pairs(ownedQty) do
+						local baseName, roman = name:match("^(.-)%s+([IV]+)$")
+						if baseName and roman and fromRoman[roman] == tier then
+							local craftCount = math.floor(qty / fuseCost)
+							if craftCount >= 1 and toRoman[tier + 1] then
+								local nextName = baseName .. " " .. toRoman[tier + 1]
+								payload[nextName] = (payload[nextName] or 0) + craftCount
+								ownedQty[nextName] = (ownedQty[nextName] or 0) + craftCount
+							end
+						end
+					end
+				end
+
+				if next(payload) ~= nil then
+					fuseRF:InvokeServer(payload)
+				end
+			end)
+		end)
+	end
+})
