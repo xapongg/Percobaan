@@ -471,7 +471,7 @@ local PotionTab = Window:Tab({
 
 PotionTab:Button({
 	Title = "Fuse All Potion",
-	Desc = "Fuse semua potion berdasarkan ImageLabel & qty di Backpack.",
+	Desc = "Fuse semua potion 1 per 1 sampai bahan habis.",
 	Callback = function()
 		task.spawn(function()
 			pcall(function()
@@ -608,7 +608,7 @@ PotionTab:Button({
 					:WaitForChild("Root"):WaitForChild("Menus"):WaitForChild("Backpack")
 					:WaitForChild("Items"):WaitForChild("ScrollingFrame")
 
-				local ownedQty = {}
+				local presentPotions = {}
 
 				for _, catFrame in ipairs(scrolling:GetChildren()) do
 					if catFrame.Name:find("Potion") then
@@ -619,17 +619,8 @@ PotionTab:Button({
 									local imgLabel = entry:FindFirstChild("ImageLabel") or entry:FindFirstChildWhichIsA("ImageLabel", true)
 									local numId = imgLabel and tostring(imgLabel.Image):match("(%d+)")
 									local potionName = numId and imageToPotion["rbxassetid://" .. numId]
-
 									if potionName then
-										local topLabel = entry:FindFirstChild("TopLabel", true)
-										local qty = 1
-										if topLabel and (topLabel:IsA("TextLabel") or topLabel:IsA("TextBox")) then
-											local parsed = tonumber(topLabel.Text:match("%d+"))
-											if parsed then
-												qty = parsed
-											end
-										end
-										ownedQty[potionName] = (ownedQty[potionName] or 0) + qty
+										presentPotions[potionName] = true
 									end
 								end
 							end
@@ -637,41 +628,40 @@ PotionTab:Button({
 					end
 				end
 
-				local fuseCost = 5
-				local payload = {}
-				local totalCrafted = 0
-
+				-- Fuse 1 per 1 dari Tier 1 -> 2 -> 3 sampai server mengembalikan false
+				local successCount = 0
 				for tier = 1, 3 do
-					for name, qty in pairs(ownedQty) do
+					for name in pairs(presentPotions) do
 						local baseName, roman = name:match("^(.-)%s+([IV]+)$")
-						if baseName and roman and fromRoman[roman] == tier then
-							local craftCount = math.floor(qty / fuseCost)
-							if craftCount >= 1 and toRoman[tier + 1] then
-								local nextName = baseName .. " " .. toRoman[tier + 1]
-								payload[nextName] = (payload[nextName] or 0) + craftCount
-								ownedQty[nextName] = (ownedQty[nextName] or 0) + craftCount
-								totalCrafted = totalCrafted + craftCount
+						if baseName and roman and fromRoman[roman] == tier and toRoman[tier + 1] then
+							local nextName = baseName .. " " .. toRoman[tier + 1]
+							while true do
+								local ok, res = pcall(function()
+									return fuseRF:InvokeServer({ [nextName] = 1 })
+								end)
+								if ok and res == true then
+									successCount = successCount + 1
+									presentPotions[nextName] = true
+									task.wait(0.05)
+								else
+									break
+								end
 							end
 						end
 					end
 				end
 
-				if next(payload) ~= nil then
-					for targetName, amount in pairs(payload) do
-						local res = fuseRF:InvokeServer({ [targetName] = amount })
-						print("[Fuse]", targetName, amount, "-> res:", res)
-						task.wait(0.05)
-					end
+				if successCount > 0 then
 					WindUI:Notify({
 						Title = "Fuse All Potion",
-						Content = "Selesai! Berhasil fuse " .. tostring(totalCrafted) .. " potion.",
+						Content = "Selesai! Berhasil fuse " .. tostring(successCount) .. " potion.",
 						Icon = "rbxassetid://135878568033396",
 						Duration = 4,
 					})
 				else
 					WindUI:Notify({
 						Title = "Fuse All Potion",
-						Content = "Tidak ada potion yang cukup untuk di-fuse.",
+						Content = "Tidak ada potion yang berhasil di-fuse.",
 						Icon = "rbxassetid://135878568033396",
 						Duration = 4,
 					})
