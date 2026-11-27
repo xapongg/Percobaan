@@ -470,7 +470,6 @@ local PotionTab = Window:Tab({
 })
 
 PotionTab:Button({
-MainTab:Button({
 	Title = "Fuse All Potion",
 	Desc = "Fuse semua potion berdasarkan ImageLabel & qty di Backpack.",
 	Callback = function()
