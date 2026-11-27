@@ -471,7 +471,7 @@ local PotionTab = Window:Tab({
 
 PotionTab:Button({
 	Title = "Fuse All Potion",
-	Desc = "Fuse semua potion berdasarkan ImageLabel & qty di Backpack.",
+	Desc = "Ambil data & fuse langsung dari menu PotionFusing.",
 	Callback = function()
 		task.spawn(function()
 			pcall(function()
@@ -489,7 +489,7 @@ PotionTab:Button({
 					return
 				end
 
-				-- Mapping rbxassetid -> Nama Potion (aman tanpa require module server)
+				-- Mapping rbxassetid -> Nama Potion
 				local imageToPotion = {
 					-- Luck
 					["rbxassetid://93245201833668"] = "Luck I",
@@ -602,83 +602,50 @@ PotionTab:Button({
 					["rbxassetid://110689264512922"] = "Spooky Luck III",
 				}
 
-				-- Coba ambil entry tambahan dari AutumnItems jika bisa di-require tanpa error
-				pcall(function()
-					local autumnMod = require(ReplicatedStorage.Framework.Features.Autumn.AutumnItems)
-					if type(autumnMod) == "table" and type(autumnMod.Boosts) == "table" then
-						for pName, info in pairs(autumnMod.Boosts) do
-							if type(info) == "table" and info.image then
-								local numId = tostring(info.image):match("(%d+)")
-								if numId then
-									imageToPotion["rbxassetid://" .. numId] = tostring(pName)
-								end
-							end
-						end
-					end
-				end)
-
-				local toRoman = { [1] = "I", [2] = "II", [3] = "III", [4] = "IV" }
-				local fromRoman = { ["I"] = 1, ["II"] = 2, ["III"] = 3, ["IV"] = 4 }
-
-				local scrolling = LocalPlayer:WaitForChild("PlayerGui")
-					:WaitForChild("Root"):WaitForChild("Menus"):WaitForChild("Backpack")
-					:WaitForChild("Items"):WaitForChild("ScrollingFrame")
-
-				local ownedQty = {}
-
-				for _, catFrame in ipairs(scrolling:GetChildren()) do
-					if catFrame.Name:find("Potion") then
-						local grid = catFrame:FindFirstChild("Grid")
-						if grid then
-							for _, entry in ipairs(grid:GetChildren()) do
-								if entry:IsA("GuiObject") and entry.Visible then
-									local imgLabel = entry:FindFirstChild("ImageLabel") or entry:FindFirstChildWhichIsA("ImageLabel", true)
-									local numId = imgLabel and tostring(imgLabel.Image):match("(%d+)")
-									local potionName = numId and imageToPotion["rbxassetid://" .. numId]
-
-									if potionName then
-										local topLabel = entry:FindFirstChild("TopLabel", true)
-										local qty = 1
-										if topLabel and (topLabel:IsA("TextLabel") or topLabel:IsA("TextBox")) then
-											local parsed = tonumber(topLabel.Text:match("%d+"))
-											if parsed then
-												qty = parsed
-											end
-										end
-										ownedQty[potionName] = (ownedQty[potionName] or 0) + qty
-									end
-								end
-							end
-						end
-					end
-				end
-
-				local fuseCost = 5
-				local payload = {}
-
-				for tier = 1, 3 do
-					for name, qty in pairs(ownedQty) do
-						local baseName, roman = name:match("^(.-)%s+([IV]+)$")
-						if baseName and roman and fromRoman[roman] == tier then
-							local craftCount = math.floor(qty / fuseCost)
-							if craftCount >= 1 and toRoman[tier + 1] then
-								local nextName = baseName .. " " .. toRoman[tier + 1]
-								payload[nextName] = (payload[nextName] or 0) + craftCount
-								ownedQty[nextName] = (ownedQty[nextName] or 0) + craftCount
-							end
-						end
-					end
-				end
+				local grid = LocalPlayer:WaitForChild("PlayerGui")
+					:WaitForChild("Root"):WaitForChild("Menus"):WaitForChild("PotionFusing")
+					:WaitForChild("Potions"):WaitForChild("GridPanel"):WaitForChild("Grid")
 
 				local successCount = 0
-				if next(payload) ~= nil then
-					for targetName, amount in pairs(payload) do
-						local res = fuseRF:InvokeServer({ [targetName] = amount })
-						if res ~= false then
-							successCount = successCount + amount
+
+				-- Ulangi beberapa pass agar hasil fuse Tier II langsung terbaca untuk Tier III dst.
+				for _ = 1, 3 do
+					local fusedThisPass = false
+
+					for _, entry in ipairs(grid:GetChildren()) do
+						if entry:IsA("GuiObject") and entry.Visible then
+							local imgLabel = entry:FindFirstChild("ImageLabel") or entry:FindFirstChildWhichIsA("ImageLabel", true)
+							local topLabel = entry:FindFirstChild("TopLabel", true)
+
+							local numId = imgLabel and tostring(imgLabel.Image):match("(%d+)")
+							local potionName = numId and imageToPotion["rbxassetid://" .. numId]
+
+							local rawQty = 0
+							if topLabel and (topLabel:IsA("TextLabel") or topLabel:IsA("TextBox")) then
+								rawQty = tonumber(topLabel.Text:match("%d+")) or 0
+							end
+
+							-- TopLabel isinya X5 atau X10 (kelipatan 5 bahan -> 1 hasil fuse)
+							local craftCount = math.floor(rawQty / 5)
+
+							if potionName and craftCount >= 1 then
+								local ok, res = pcall(function()
+									return fuseRF:InvokeServer({ [potionName] = craftCount })
+								end)
+
+								if ok and res == true then
+									successCount = successCount + craftCount
+									fusedThisPass = true
+									task.wait(0.15)
+								end
+							end
 						end
-						task.wait(0.05)
 					end
+
+					if not fusedThisPass then
+						break
+					end
+					task.wait(0.2)
 				end
 
 				if successCount > 0 then
@@ -691,7 +658,7 @@ PotionTab:Button({
 				else
 					WindUI:Notify({
 						Title = "Fuse All Potion",
-						Content = "Tidak ada potion yang berhasil di-fuse.",
+						Content = "Tidak ada potion yang bisa di-fuse (kurang dari X5).",
 						Icon = "rbxassetid://135878568033396",
 						Duration = 4,
 					})
