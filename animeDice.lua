@@ -187,6 +187,11 @@ MainTab:Toggle({
     end
 })
 
+MainTab:Section({
+    Title = "Auto Rolls",
+})
+
+
 MainTab:Toggle({
     Title = "Auto Roll Dice",
     Default = false,
@@ -237,6 +242,61 @@ MainTab:Toggle({
 	end
 })
 
+MainTab:Section({
+    Title = "Events",
+})
+
+MainTab:Toggle({
+    Title = "Auto Walk to Apple",
+    Default = false,
+    Callback = function(Value)
+        _G.AutoWalkApple = Value
+        if Value then
+            task.spawn(function()
+                local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+                local humanoid = char:WaitForChild("Humanoid")
+                local rootPart = char:WaitForChild("HumanoidRootPart")
+
+                while _G.AutoWalkApple do
+                    pcall(function()
+                        local applesFolder = Workspace:FindFirstChild("AutumnApples")
+                        if applesFolder then
+                            for _, obj in ipairs(applesFolder:GetChildren()) do
+                                if not _G.AutoWalkApple then break end
+                                
+                                if obj.Name:sub(1, 6) == "Apple_" then
+                                    local targetPos = nil
+                                    if obj:IsA("BasePart") then
+                                        targetPos = obj.Position
+                                    elseif obj:IsA("Model") and obj.PrimaryPart then
+                                        targetPos = obj.PrimaryPart.Position
+                                    elseif obj:IsA("Model") then
+                                        local part = obj:FindFirstChildWhichIsA("BasePart")
+                                        if part then targetPos = part.Position end
+                                    end
+
+                                    if targetPos then
+                                        humanoid:MoveTo(targetPos)
+                                        local startTime = tick()
+                                        repeat
+                                            task.wait(0.1)
+                                        until (rootPart.Position - targetPos).Magnitude < 4 or not _G.AutoWalkApple or (tick() - startTime) > 3
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                    task.wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+
+MainTab:Section({
+    Title = "Level Up Unit",
+})
 
 --// Referensi Remote Level Up Slot (Taruh bersama remote lainnya)
 local levelUpSlotRE
@@ -293,7 +353,6 @@ _G.AutoLevelUpSlot = false
 
 MainTab:Slider({
 	Title = "Target Slot Level",
-	Desc = "Level maksimal yang ingin dicapai tiap slot (30 - 150).",
 	Step = 5,
 	Value = {
 		Min = 15,
@@ -339,54 +398,6 @@ MainTab:Toggle({
 	end
 })
 
-
-
-MainTab:Toggle({
-    Title = "Auto Walk to Apple",
-    Default = false,
-    Callback = function(Value)
-        _G.AutoWalkApple = Value
-        if Value then
-            task.spawn(function()
-                local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-                local humanoid = char:WaitForChild("Humanoid")
-                local rootPart = char:WaitForChild("HumanoidRootPart")
-
-                while _G.AutoWalkApple do
-                    pcall(function()
-                        local applesFolder = Workspace:FindFirstChild("AutumnApples")
-                        if applesFolder then
-                            for _, obj in ipairs(applesFolder:GetChildren()) do
-                                if not _G.AutoWalkApple then break end
-                                
-                                if obj.Name:sub(1, 6) == "Apple_" then
-                                    local targetPos = nil
-                                    if obj:IsA("BasePart") then
-                                        targetPos = obj.Position
-                                    elseif obj:IsA("Model") and obj.PrimaryPart then
-                                        targetPos = obj.PrimaryPart.Position
-                                    elseif obj:IsA("Model") then
-                                        local part = obj:FindFirstChildWhichIsA("BasePart")
-                                        if part then targetPos = part.Position end
-                                    end
-
-                                    if targetPos then
-                                        humanoid:MoveTo(targetPos)
-                                        local startTime = tick()
-                                        repeat
-                                            task.wait(0.1)
-                                        until (rootPart.Position - targetPos).Magnitude < 4 or not _G.AutoWalkApple or (tick() - startTime) > 3
-                                    end
-                                end
-                            end
-                        end
-                    end)
-                    task.wait(0.1)
-                end
-            end)
-        end
-    end
-})
 
 
 --// Referensi Remote Shop (Taruh di bagian atas bersama remote lainnya)
