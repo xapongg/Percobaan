@@ -171,7 +171,7 @@ MainTab:Button({
     Desc = "Buka Moon Dex Explorer",
     Callback = function()
         local ok, err = pcall(function()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/peyton2465/Dex/master/out.lua"))()
+            loadstring(game:HttpGet("https://obj.wearedevs.net/s/610067c537cd63b05ca78e6a.lua"))()
         end)
         WindUI:Notify({
             Title = "Moon Dex",
