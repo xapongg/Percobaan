@@ -470,8 +470,9 @@ local PotionTab = Window:Tab({
 })
 
 PotionTab:Button({
+MainTab:Button({
 	Title = "Fuse All Potion",
-	Desc = "Fuse semua potion 1 per 1 sampai bahan habis.",
+	Desc = "Fuse semua potion berdasarkan ImageLabel & qty di Backpack.",
 	Callback = function()
 		task.spawn(function()
 			pcall(function()
@@ -489,6 +490,7 @@ PotionTab:Button({
 					return
 				end
 
+				-- Mapping rbxassetid -> Nama Potion (aman tanpa require module server)
 				local imageToPotion = {
 					-- Luck
 					["rbxassetid://93245201833668"] = "Luck I",
@@ -601,6 +603,21 @@ PotionTab:Button({
 					["rbxassetid://110689264512922"] = "Spooky Luck III",
 				}
 
+				-- Coba ambil entry tambahan dari AutumnItems jika bisa di-require tanpa error
+				pcall(function()
+					local autumnMod = require(ReplicatedStorage.Framework.Features.Autumn.AutumnItems)
+					if type(autumnMod) == "table" and type(autumnMod.Boosts) == "table" then
+						for pName, info in pairs(autumnMod.Boosts) do
+							if type(info) == "table" and info.image then
+								local numId = tostring(info.image):match("(%d+)")
+								if numId then
+									imageToPotion["rbxassetid://" .. numId] = tostring(pName)
+								end
+							end
+						end
+					end
+				end)
+
 				local toRoman = { [1] = "I", [2] = "II", [3] = "III", [4] = "IV" }
 				local fromRoman = { ["I"] = 1, ["II"] = 2, ["III"] = 3, ["IV"] = 4 }
 
@@ -608,7 +625,7 @@ PotionTab:Button({
 					:WaitForChild("Root"):WaitForChild("Menus"):WaitForChild("Backpack")
 					:WaitForChild("Items"):WaitForChild("ScrollingFrame")
 
-				local presentPotions = {}
+				local ownedQty = {}
 
 				for _, catFrame in ipairs(scrolling:GetChildren()) do
 					if catFrame.Name:find("Potion") then
@@ -619,8 +636,17 @@ PotionTab:Button({
 									local imgLabel = entry:FindFirstChild("ImageLabel") or entry:FindFirstChildWhichIsA("ImageLabel", true)
 									local numId = imgLabel and tostring(imgLabel.Image):match("(%d+)")
 									local potionName = numId and imageToPotion["rbxassetid://" .. numId]
+
 									if potionName then
-										presentPotions[potionName] = true
+										local topLabel = entry:FindFirstChild("TopLabel", true)
+										local qty = 1
+										if topLabel and (topLabel:IsA("TextLabel") or topLabel:IsA("TextBox")) then
+											local parsed = tonumber(topLabel.Text:match("%d+"))
+											if parsed then
+												qty = parsed
+											end
+										end
+										ownedQty[potionName] = (ownedQty[potionName] or 0) + qty
 									end
 								end
 							end
@@ -628,26 +654,31 @@ PotionTab:Button({
 					end
 				end
 
-				-- Fuse 1 per 1 dari Tier 1 -> 2 -> 3 sampai server mengembalikan false
-				local successCount = 0
+				local fuseCost = 5
+				local payload = {}
+
 				for tier = 1, 3 do
-					for name in pairs(presentPotions) do
+					for name, qty in pairs(ownedQty) do
 						local baseName, roman = name:match("^(.-)%s+([IV]+)$")
-						if baseName and roman and fromRoman[roman] == tier and toRoman[tier + 1] then
-							local nextName = baseName .. " " .. toRoman[tier + 1]
-							while true do
-								local ok, res = pcall(function()
-									return fuseRF:InvokeServer({ [nextName] = 1 })
-								end)
-								if ok and res == true then
-									successCount = successCount + 1
-									presentPotions[nextName] = true
-									task.wait(0.05)
-								else
-									break
-								end
+						if baseName and roman and fromRoman[roman] == tier then
+							local craftCount = math.floor(qty / fuseCost)
+							if craftCount >= 1 and toRoman[tier + 1] then
+								local nextName = baseName .. " " .. toRoman[tier + 1]
+								payload[nextName] = (payload[nextName] or 0) + craftCount
+								ownedQty[nextName] = (ownedQty[nextName] or 0) + craftCount
 							end
 						end
+					end
+				end
+
+				local successCount = 0
+				if next(payload) ~= nil then
+					for targetName, amount in pairs(payload) do
+						local res = fuseRF:InvokeServer({ [targetName] = amount })
+						if res ~= false then
+							successCount = successCount + amount
+						end
+						task.wait(0.05)
 					end
 				end
 
