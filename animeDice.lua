@@ -489,7 +489,6 @@ PotionTab:Button({
 					return
 				end
 
-				-- Mapping rbxassetid -> Nama Potion (aman tanpa require module server)
 				local imageToPotion = {
 					-- Luck
 					["rbxassetid://93245201833668"] = "Luck I",
@@ -658,7 +657,11 @@ PotionTab:Button({
 				end
 
 				if next(payload) ~= nil then
-					fuseRF:InvokeServer(payload)
+					for targetName, amount in pairs(payload) do
+						local res = fuseRF:InvokeServer({ [targetName] = amount })
+						print("[Fuse]", targetName, amount, "-> res:", res)
+						task.wait(0.05)
+					end
 					WindUI:Notify({
 						Title = "Fuse All Potion",
 						Content = "Selesai! Berhasil fuse " .. tostring(totalCrafted) .. " potion.",
