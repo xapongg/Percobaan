@@ -368,29 +368,36 @@ MainTab:Toggle({
 					pcall(function()
 						local char = LocalPlayer.Character
 						local rootPart = char and char:FindFirstChild("HumanoidRootPart")
-						local applesFolder = Workspace:FindFirstChild("AutumnApples")
+						local applesFolder = workspace:FindFirstChild("AutumnApples", true)
 
 						if rootPart and applesFolder then
 							for _, obj in ipairs(applesFolder:GetChildren()) do
 								if not _G.AutoBringApple then break end
 
-								if obj.Name:sub(1, 6) == "Apple_" then
-									if obj:IsA("BasePart") then
-										obj.CanCollide = false
-										obj.CFrame = rootPart.CFrame
-										if firetouchinterest then
-											firetouchinterest(rootPart, obj, 0)
-											firetouchinterest(rootPart, obj, 1)
-										end
-									elseif obj:IsA("Model") then
-										for _, part in ipairs(obj:GetDescendants()) do
-											if part:IsA("BasePart") then
-												part.CanCollide = false
-												part.CFrame = rootPart.CFrame
-												if firetouchinterest then
-													firetouchinterest(rootPart, part, 0)
-													firetouchinterest(rootPart, part, 1)
+								if obj.Name:find("Apple") then
+									-- Jika berupa Model, geser seluruh model dengan PivotTo
+									if obj:IsA("Model") then
+										obj:PivotTo(rootPart.CFrame)
+									end
+
+									-- Lepas weld/anchor pada part & tarik ke karakter
+									local targets = obj:IsA("BasePart") and { obj } or obj:GetDescendants()
+									for _, part in ipairs(targets) do
+										if part:IsA("BasePart") then
+											for _, joint in ipairs(part:GetChildren()) do
+												if joint:IsA("Weld") or joint:IsA("WeldConstraint") or joint:IsA("Motor6D") then
+													joint:Destroy()
 												end
+											end
+
+											part.Anchored = false
+											part.CanCollide = false
+											part.AssemblyLinearVelocity = Vector3.zero
+											part.CFrame = rootPart.CFrame
+
+											if firetouchinterest then
+												firetouchinterest(rootPart, part, 0)
+												firetouchinterest(rootPart, part, 1)
 											end
 										end
 									end
@@ -398,12 +405,13 @@ MainTab:Toggle({
 							end
 						end
 					end)
-					task.wait(0.1)
+					task.wait(0.05)
 				end
 			end)
 		end
 	end
 })
+
 
 
 --// Referensi Remote Shop (Taruh di bagian atas bersama remote lainnya)
